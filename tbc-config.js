@@ -4,6 +4,7 @@
 window.TBC_CONFIG = Object.freeze({
   SUPABASE_URL: "https://jcepavwocdujoeoqxvsd.supabase.co",
   SUPABASE_KEY: "sb_publishable_Tj2n8e3yY1HyvaFzXRyO_w_PWrVFB7E",
-  MANAGEMENT_URL: "https://yami102030.github.io/management/",
-  CENTER_URL: "https://yami102030.github.io/center/"
+  // 網址自動依目前網域產生，測試站、正式站都不用改
+  MANAGEMENT_URL: window.location.origin + "/management/",
+  CENTER_URL: window.location.origin + "/center/"
 });
