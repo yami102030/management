@@ -12991,7 +12991,7 @@
         { id: "members", label: "同工資料中心", href: "serve.html#members" },
         { id: "scheduling", label: "排班作業中心", href: "serve.html#scheduling" },
         { id: "insights", label: "人力洞察中心", href: "serve.html#insights" },
-        { id: "control", label: "服事查詢控制面板", href: "serve.html#control" }
+        { id: "control", label: "功能設定", href: "serve.html#control" }
       ]
     },
     { id: "venue", label: "場地預約", Icon: CalendarClock, href: "" }
