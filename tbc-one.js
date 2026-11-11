@@ -13154,7 +13154,7 @@
         setBusy(true);
         try {
           const { data: ok, error: ce } = await supabase2.rpc("check_member_exists", { p_account: account });
-          if (ce) throw new Error("驗證時發生錯誤，再試一次，或聯絡行政辦公室");
+          if (ce) throw new Error("驗證發生錯誤，再試一次，或聯絡行政辦公室");
           if (!ok) throw new Error("查無此帳號，再試一次，或聯絡行政辦公室");
           const { data, error } = await supabase2.auth.signUp({ email: toLoginEmail(account), password });
           const fake = data && data.user && data.user.identities && data.user.identities.length === 0;
@@ -13164,9 +13164,9 @@
           setPassword2("");
           setShowPw(false);
           setMode("login");
-          setInfo("註冊成功，請用剛設定的密碼登入");
+          setInfo("註冊成功");
         } catch (e2) {
-          let m = e2.message || "註冊失敗，請再試一次";
+          let m = e2.message || "註冊失敗，再試一次";
           if (m.includes("Password should be at least")) m = "密碼長度至少需 6 個字元";
           if (m.includes("already registered")) m = "帳號已經註冊過了";
           setErr(m);
@@ -13177,7 +13177,7 @@
       setBusy(true);
       const { error } = await supabase2.auth.signInWithPassword({ email: toLoginEmail(account), password });
       setBusy(false);
-      if (error) setErr("帳號或密碼不正確，請再試一次");
+      if (error) setErr("帳號或密碼不正確，再試一次");
     };
     const inp = "w-full h-12 px-4 rounded-full bg-slate-100 outline-none text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/40 transition-colors";
     const eye = h("button", { type: "button", onClick: () => setShowPw((v) => !v), title: showPw ? "隱藏密碼" : "顯示密碼", "aria-label": showPw ? "隱藏密碼" : "顯示密碼", className: "absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" }, showPw ? h(EyeOff, { size: 18 }) : h(Eye, { size: 18 }));
@@ -13299,25 +13299,25 @@
     const m = String(e && e.message || e || "");
     const map = [
       ["not your routine item", "只有本人可以修改自己的工作"],
-      ["not your item", "只有派工者可以修改這筆工作，負責人只能改狀態"],
-      ["nothing to confirm", "這筆已經不是「待確認」狀態"],
-      ["nothing to return", "這筆已經不是「待確認」狀態"],
-      ["assignee is not allowed", "負責人必須是有權限的同工"],
-      ["cannot complete", "這筆已經完成、跳過或取消，不能再按完成"],
+      ["not your item", "只有派工者可以修改，執行者只能改狀態"],
+      ["nothing to confirm", "已經不是「待確認」狀態"],
+      ["nothing to return", "已經不是「待確認」狀態"],
+      ["assignee is not allowed", "執行者必須是有權限的同工"],
+      ["cannot complete", "工作已完成、跳過或取消，不能再按完成"],
       ["cannot skip", "只有「週期自動產生、尚未完成」的工作可以跳過"],
-      ["overdue items cannot be moved", "逾期的任務固定在最上面，不能搬移"],
-      ["item not in your list", "這筆不在你的清單裡"],
-      ["item not found or canceled", "這筆工作已被取消或不存在"],
-      ["more than one member record", "這個帳號對應到多筆同工資料（共用帳號），請先拆分帳號"],
-      ["no member record", "找不到這個帳號對應的同工資料"],
-      ["no permission", "沒有使用權限"],
-      ["permission denied", "沒有使用權限"],
+      ["overdue items cannot be moved", "逾期工作置頂，無法調整位置"],
+      ["item not in your list", "不在你的清單裡"],
+      ["item not found or canceled", "工作已取消或不存在"],
+      ["more than one member record", "共用帳號，洽行政辦公室"],
+      ["no member record", "查無資料"],
+      ["no permission", "權限不足"],
+      ["permission denied", "權限不足"],
       ["dates are required", "日期必填"],
-      ["weekly rule needs", "每週重複請至少選一個星期"],
-      ["monthly rule needs", "每月重複請選幾號，或勾「每月最後一天」"],
-      ["until date is before", "重複的結束日不能早於開始日"],
-      ["not your recurring rule", "只有建立者可以修改這個週期工作"],
-      ["violates check constraint", "內容不符合規則（例如任務名稱空白、結束日期早於開始日期）"]
+      ["weekly rule needs", "選一個星期"],
+      ["monthly rule needs", "選日期，或勾選「每月最後一天」"],
+      ["until date is before", "結束日不能早於開始日"],
+      ["not your recurring rule", "權限不足"],
+      ["violates check constraint", "規則不符（例如工作摘要空白、結束日期早於開始日期）"]
     ];
     for (const [k, v] of map) if (m.includes(k)) return v;
     return m || "發生未知錯誤";
@@ -13331,7 +13331,7 @@
     return "每月 " + parts.join("、");
   };
   var PersonTag = ({ person, strong }) => /* @__PURE__ */ import_react5.default.createElement("span", { className: `truncate max-w-full ${strong ? "font-bold text-slate-900" : "text-slate-700"}` }, person && person.name || "（未知）");
-  var DUR_PRESETS = [[15, "15分鐘"], [30, "30分鐘"], [45, "45分鐘"], [60, "1小時"], [90, "1.5小時"]];
+  var DUR_PRESETS = [[15, "15分"], [30, "30分"], [45, "45分"], [60, "1小時"], [90, "1.5小時"]];
   var toMin = (t) => {
     if (!t) return null;
     const [h, m] = t.split(":").map(Number);
@@ -13579,7 +13579,7 @@
       if (edited !== "end" && st) {
         const ne = toMin(st) + min;
         if (ne >= 1440) {
-          setHint("工時超出當天，請調整開始時間或工時");
+          setHint("工時超出當天，調整開始時間或工時");
           return;
         }
         if (et && toMin(et) !== ne) setHint("開始、結束時間和工時不符，已自動修正結束時間");
@@ -13587,7 +13587,7 @@
       } else if (et) {
         const ns = toMin(et) - min;
         if (ns < 0) {
-          setHint("工時超出當天，請調整結束時間或工時");
+          setHint("工時超出當天，調整結束時間或工時");
           return;
         }
         if (st && toMin(st) !== ns) setHint("開始、結束時間和工時不符，已自動修正開始時間");
@@ -13695,15 +13695,15 @@
       setErr("");
       setBad("");
       if (!title.trim()) return fail(parent ? "輸入子工作" : "輸入工作摘要", "tbc-f-title");
-      if (mode === "create" && dispatcher.size === 0) return fail("請選擇派工的人", "tbc-f-disp");
-      if (mode === "create" && assignees.size === 0) return fail("請至少選一位執行的人", "tbc-f-doer");
+      if (mode === "create" && dispatcher.size === 0) return fail("選擇派工人", "tbc-f-disp");
+      if (mode === "create" && assignees.size === 0) return fail("至少選一位執行人", "tbc-f-doer");
       if (!startDate) return fail("開始日期必填", "tbc-f-start");
       if (durMin && !startTime && !endTime) return fail("填寫開始時間或結束時間", "tbc-f-stime");
       if (startTime && !endTime || !startTime && endTime) return fail("同時填寫或同時取消", startTime ? "tbc-f-etime" : "tbc-f-stime");
       if (startTime && endTime && sameDay && toMin(endTime) < toMin(startTime)) return fail("結束時間不能早於開始時間", "tbc-f-etime");
       if (repeat === "none" && (!endDate || endDate < startDate)) return fail("結束日期不能早於開始日期", "tbc-f-end");
-      if (repeat === "weekly" && weekDays.length === 0) return fail("每週重複請至少選一個星期", "tbc-f-week");
-      if (repeat === "monthly" && !monthDay && !monthLast) return fail("每月重複請選幾號，或勾「每月最後一天」", "tbc-f-month");
+      if (repeat === "weekly" && weekDays.length === 0) return fail("至少選一個星期", "tbc-f-week");
+      if (repeat === "monthly" && !monthDay && !monthLast) return fail("選日期，或勾選「每月最後一天」", "tbc-f-month");
       if (repeat !== "none" && untilDate && untilDate < startDate) return fail("重複的結束日不能早於開始日", "tbc-f-until");
       onSubmit({
         title: title.trim(),
@@ -14255,7 +14255,7 @@
     };
     const saveTitle = (row, v) => {
       if (!v) {
-        showMessage("error", "任務名稱不能空白");
+        showMessage("error", "工作摘要不能空白");
         return;
       }
       return saveItem(row, { title: v });
@@ -14265,7 +14265,7 @@
       () => call("work_set_status", { p_item_id: row.item.id, p_status: st }),
       st === "done" && row.item.creator_member_id !== me ? "完成回報，等待派工者確認" : "狀態已更新"
     );
-    const confirmRow = (row) => act(() => call("work_confirm", { p_assignee_id: row.a.id }), "已確認完成");
+    const confirmRow = (row) => act(() => call("work_confirm", { p_assignee_id: row.a.id }), "已完成");
     const [returnInfo, setReturnInfo] = (0, import_react5.useState)(null);
     const [returnTarget, setReturnTarget] = (0, import_react5.useState)(null);
     const [returnText, setReturnText] = (0, import_react5.useState)("");
@@ -14302,7 +14302,7 @@
       if (r) {
         setQuickTitle("");
         const inRange = d <= range.end && d >= range.start;
-        showMessage("success", inRange ? "已新增" : `已新增到 ${mdLabel(d)}（目前顯示範圍看不到，切換範圍就會出現）`);
+        showMessage("success", inRange ? "已新增" : `已新增到 ${mdLabel(d)}（可切換選項查詢）`);
       }
     };
     const submitModal = async (p) => {
@@ -14325,7 +14325,7 @@
           p_note: p.note,
           p_meeting_flag: null,
           p_is_active: p.isActive
-        }), "週期工作已儲存（只影響之後產生的工作）");
+        }), "週期工作設定完成");
         if (ok !== void 0) await loadRules();
       } else if (p.repeat === "none" && p.assigneeIds && (modal.parent || !(p.assigneeIds.length === 1 && p.assigneeIds[0] === me && p.dispatcherId === me))) {
         const others = p.assigneeIds.some((id) => id !== me);
@@ -14368,7 +14368,7 @@
           p_priority: p.priority,
           p_note: p.note,
           p_meeting_flag: null
-        }), "已建立週期工作，之後會在凌晨自動出現在清單");
+        }), "週期工作設定完成，凌晨自動建立");
       }
       setBusy(false);
       if (ok !== void 0) setModal(null);
@@ -14548,7 +14548,7 @@
                 type: "button",
                 disabled: !canEdit,
                 onClick: () => saveItem(r, { priority: PRIORITY_NEXT[r.item.priority] || "normal" }),
-                title: canEdit ? "點一下切換" : "",
+                title: canEdit ? "點選切換" : "",
                 className: `tbc-prio text-[0.75em] px-2 py-0.5 rounded border font-bold ${PRIORITY_TONE[r.item.priority] || PRIORITY_TONE.normal} ${canEdit ? "hover:brightness-95 cursor-pointer" : "cursor-default"}`
               },
               PRIORITY_LABEL[r.item.priority] || "普通"
@@ -14569,7 +14569,7 @@
                 value: cur,
                 onChange: (e) => setStatus(r, e.target.value),
                 "aria-label": "狀態",
-                title: "點一下改變狀態",
+                title: "點選項目",
                 className: `h-8 pl-3 pr-2 rounded-full border text-[0.85em] font-medium outline-none cursor-pointer text-center ${tone}`
               },
               /* @__PURE__ */ import_react5.default.createElement("option", { value: "pending" }, "待處理"),
@@ -14803,7 +14803,7 @@
     const isAdmin = shell.identity && shell.identity.role === "admin";
     let content;
     if (!isAdmin) {
-      content = h("div", { className: "h-full flex items-center justify-center text-slate-500" }, "權限不足：服事管理只有管理員可以使用");
+      content = h("div", { className: "h-full flex items-center justify-center text-slate-500" }, "權限不足");
     } else if (!ready) {
       content = h("div", { className: "h-full flex items-center justify-center text-slate-400 animate-pulse" }, "Loading...");
     } else {
