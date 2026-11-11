@@ -13852,6 +13852,7 @@
     const [searchSubFlat, setSearchSubFlat] = (0, import_react5.useState)([]);
     const [searchBusy, setSearchBusy] = (0, import_react5.useState)(false);
     const [page, setPage] = (0, import_react5.useState)(1);
+    const [pageText, setPageText] = (0, import_react5.useState)("1");
     const searchReq = (0, import_react5.useRef)(0);
     const kwRef = (0, import_react5.useRef)("");
     const [menu, setMenu] = (0, import_react5.useState)(null);
@@ -13976,7 +13977,8 @@
     const loadSearch = async (word) => {
       const w = (word === void 0 ? kwRef.current : word).trim();
       const req = ++searchReq.current;
-      if (!w || !w.replace(/[\\%_]/g, "")) {
+      const terms = [...new Set(w.split(/\s+/).map((x) => x.replace(/[\\%_]/g, "")).filter(Boolean))];
+      if (!terms.length) {
         setSearchFlat([]);
         setSearchSubFlat([]);
         setSearchBusy(false);
@@ -13988,21 +13990,30 @@
           if (res && res.error) throw res.error;
           return res && res.data || [];
         };
-        const esc = w.replace(/[\\%_]/g, "").replace(/"/g, '\\"');
-        const lw = w.toLowerCase();
-        const ids = /* @__PURE__ */ new Set();
-        const hitText = ok(await supabase2.from("work_items").select("id, parent_id").is("canceled_at", null).or(`title.ilike."%${esc}%",note.ilike."%${esc}%"`).limit(2e3));
-        hitText.forEach((x) => ids.add(x.parent_id || x.id));
-        const pids = people.filter((pp) => pp.name && pp.name.toLowerCase().includes(lw)).map((pp) => pp.member_id);
-        if (pids.length) {
-          const byAsg = ok(await supabase2.from("work_assignees").select("item_id, work_items!inner(parent_id, canceled_at)").in("member_id", pids).limit(2e3));
-          byAsg.forEach((x) => {
-            if (!x.work_items.canceled_at) ids.add(x.work_items.parent_id || x.item_id);
-          });
-          const byCreator = ok(await supabase2.from("work_items").select("id, parent_id").is("canceled_at", null).in("creator_member_id", pids).limit(2e3));
-          byCreator.forEach((x) => ids.add(x.parent_id || x.id));
+        const idsFor = async (t) => {
+          const esc = t.replace(/"/g, '\\"');
+          const lw = t.toLowerCase();
+          const ids = /* @__PURE__ */ new Set();
+          const hitText = ok(await supabase2.from("work_items").select("id, parent_id").is("canceled_at", null).or(`title.ilike."%${esc}%",note.ilike."%${esc}%"`).limit(2e3));
+          hitText.forEach((x) => ids.add(x.parent_id || x.id));
+          const pids = people.filter((pp) => pp.name && pp.name.toLowerCase().includes(lw)).map((pp) => pp.member_id);
+          if (pids.length) {
+            const byAsg = ok(await supabase2.from("work_assignees").select("item_id, work_items!inner(parent_id, canceled_at)").in("member_id", pids).limit(2e3));
+            byAsg.forEach((x) => {
+              if (!x.work_items.canceled_at) ids.add(x.work_items.parent_id || x.item_id);
+            });
+            const byCreator = ok(await supabase2.from("work_items").select("id, parent_id").is("canceled_at", null).in("creator_member_id", pids).limit(2e3));
+            byCreator.forEach((x) => ids.add(x.parent_id || x.id));
+          }
+          return ids;
+        };
+        let all = null;
+        for (const t of terms) {
+          const got = await idsFor(t);
+          all = all === null ? [...got] : all.filter((id) => got.has(id));
+          if (!all.length) break;
         }
-        const all = [...ids];
+        all = all || [];
         const items = [];
         for (let i = 0; i < all.length; i += 100) {
           items.push(...ok(await supabase2.from("work_items").select("*, work_assignees(*)").in("id", all.slice(i, i + 100)).is("canceled_at", null)));
@@ -14035,6 +14046,9 @@
     (0, import_react5.useEffect)(() => {
       setPage(1);
     }, [viewWho, selected]);
+    (0, import_react5.useEffect)(() => {
+      setPageText(String(page));
+    }, [page]);
     (0, import_react5.useEffect)(() => {
       loadPeople();
     }, []);
@@ -14148,6 +14162,9 @@
       }
       return { overdueRows: od2, groups: gs2, total: od.length + inR.length, pages: 1 };
     }, [flat, now, me, viewWho, selected, range, peopleMap, searching, searchFlat, page, sort]);
+    (0, import_react5.useEffect)(() => {
+      if (page > pages) setPage(pages);
+    }, [pages]);
     const subMap = (0, import_react5.useMemo)(() => {
       const m = {};
       const seen = /* @__PURE__ */ new Set();
@@ -14679,7 +14696,7 @@
     }, className: "bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none text-[0.9em] text-slate-900 focus:ring-2 focus:ring-indigo-500/20" }), /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-slate-400" }, "～"), /* @__PURE__ */ import_react5.default.createElement("input", { type: "date", value: customEnd, min: customStart, onChange: (e) => {
       const v = e.target.value;
       setCustomEnd(customStart && v < customStart ? customStart : v);
-    }, className: "bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none text-[0.9em] text-slate-900 focus:ring-2 focus:ring-indigo-500/20" })), /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-slate-400 text-[0.85em]" }, viewWho === "notice" ? /* @__PURE__ */ import_react5.default.createElement("span", null, "提醒的派工　共 ", noticeRows.length, " 筆") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, searching ? `搜尋「${kw}」` : range.start === range.end ? mdLabel(range.start) : `${mdLabel(range.start)} ～ ${mdLabel(range.end)}`, /* @__PURE__ */ import_react5.default.createElement("span", { className: "ml-3" }, "共 ", total, " 筆"))))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex-1 overflow-auto custom-scrollbar px-6 pt-2 pb-24" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-4", style: { minWidth: listMinWidth } }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "grid sticky top-0 z-10 bg-slate-100 border border-slate-300 rounded-lg overflow-hidden text-[0.85em] font-medium text-slate-700", style: { gridTemplateColumns: tpl } }, /* @__PURE__ */ import_react5.default.createElement("span", { className: "py-2" }), visibleCols.map((c) => c.sortable ? /* @__PURE__ */ import_react5.default.createElement(
+    }, className: "bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none text-[0.9em] text-slate-900 focus:ring-2 focus:ring-indigo-500/20" })), /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-slate-400 text-[0.85em]" }, viewWho === "notice" ? /* @__PURE__ */ import_react5.default.createElement("span", null, "提醒的派工　共 ", noticeRows.length, " 筆") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, !searching && /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, range.start === range.end ? mdLabel(range.start) : `${mdLabel(range.start)} ～ ${mdLabel(range.end)}`, /* @__PURE__ */ import_react5.default.createElement("span", { className: "ml-3" }, "共 ", total, " 筆")))))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex-1 overflow-auto custom-scrollbar px-6 pt-2 pb-24" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-4", style: { minWidth: listMinWidth } }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "grid sticky top-0 z-10 bg-slate-100 border border-slate-300 rounded-lg overflow-hidden text-[0.85em] font-medium text-slate-700", style: { gridTemplateColumns: tpl } }, /* @__PURE__ */ import_react5.default.createElement("span", { className: "py-2" }), visibleCols.map((c) => c.sortable ? /* @__PURE__ */ import_react5.default.createElement(
       "button",
       {
         key: c.id,
@@ -14694,7 +14711,27 @@
     ) : /* @__PURE__ */ import_react5.default.createElement("span", { key: c.id, className: "py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap" }, c.label))), viewWho === "notice" ? noticeRows.length === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, "目前沒有提醒") : /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-notice-list bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, noticeRows.map((r) => renderWithSubs(r, null))) : (searching ? searchBusy && searchFlat.length === 0 : isLoading && flat.length === 0) ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-20 text-slate-400 font-medium animate-pulse" }, searching ? "搜尋中…" : "Loading...") : total === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, searching ? `找不到符合「${kw}」的工作` : "新增一筆工作，開始記錄") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, overdueRows.length > 0 && /* @__PURE__ */ import_react5.default.createElement("div", { className: "bg-white rounded-xl shadow-soft border border-red-100 overflow-hidden" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-4 py-2.5 bg-red-50 border-b border-red-100 flex items-center gap-2 text-red-600 font-bold" }, /* @__PURE__ */ import_react5.default.createElement(AlertTriangle, { size: ic }), " 逾期未完成 ", /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-[0.8em] bg-white/80 border border-red-100 px-2 rounded-md" }, overdueRows.length)), overdueRows.map((r) => renderWithSubs(r, null))), groups.map((g) => {
       const dl = dateLabel(g.date, today);
       return /* @__PURE__ */ import_react5.default.createElement("div", { key: g.date, className: "bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 flex items-center gap-2" }, /* @__PURE__ */ import_react5.default.createElement("span", { className: `font-bold ${dl.tag === "今天" ? "text-indigo-600" : "text-slate-800"}` }, dl.text)), g.rows.map((r) => renderWithSubs(r, g)));
-    }), searching && pages > 1 && /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-pager flex items-center justify-center gap-3 pt-2 text-[0.9em] text-slate-600" }, /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", disabled: page <= 1, onClick: () => setPage(Math.max(1, page - 1)), className: "tbc-pager-prev h-9 px-4 rounded-full bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" }, "上一頁"), /* @__PURE__ */ import_react5.default.createElement("span", { className: "tbc-pager-info" }, "第 ", Math.min(page, pages), " ／ ", pages, " 頁"), /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", disabled: page >= pages, onClick: () => setPage(Math.min(pages, page + 1)), className: "tbc-pager-next h-9 px-4 rounded-full bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" }, "下一頁")))))), returnInfo && /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm", onClick: () => setReturnInfo(null) }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-return-info bg-white w-full max-w-md rounded-2xl shadow-hover-soft border border-slate-100 overflow-hidden animate-fade-in", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-5 py-4 border-b border-slate-100 flex justify-between items-center" }, /* @__PURE__ */ import_react5.default.createElement("h3", { className: "text-lg font-bold text-slate-900 flex items-center gap-2" }, /* @__PURE__ */ import_react5.default.createElement(RotateCcw, { size: 20, className: "text-amber-600" }), "退回原因"), /* @__PURE__ */ import_react5.default.createElement("button", { "aria-label": "關閉", onClick: () => setReturnInfo(null), className: "p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 20 }))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "p-5 space-y-2" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-return-title font-bold text-slate-900" }, "工作摘要：", returnInfo.item.title), /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-return-reason text-slate-900 whitespace-pre-wrap" }, returnInfo.a.return_note)))), returnTarget && /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "bg-white w-full max-w-md rounded-2xl shadow-hover-soft border border-slate-100 overflow-hidden animate-fade-in" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-5 py-4 border-b border-slate-100 flex justify-between items-center" }, /* @__PURE__ */ import_react5.default.createElement("h3", { className: "text-lg font-bold text-slate-900 flex items-center gap-2" }, /* @__PURE__ */ import_react5.default.createElement(Undo2, { size: 20, className: "text-indigo-600" }), "退回"), /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setReturnTarget(null), className: "p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 20 }))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "p-5 space-y-2" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: "text-xs font-medium text-slate-500" }, "原因（選填）"), /* @__PURE__ */ import_react5.default.createElement("textarea", { autoFocus: true, value: returnText, onChange: (e) => setReturnText(e.target.value), rows: 3, placeholder: "簡要說明", className: "tbc-return-text w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 outline-none text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" })), /* @__PURE__ */ import_react5.default.createElement("div", { className: "p-3 bg-slate-50 flex gap-2 border-t border-slate-100" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setReturnTarget(null), className: "flex-1 py-3 font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-full" }, "取消"), /* @__PURE__ */ import_react5.default.createElement("button", { onClick: doReturn, className: "tbc-return-ok flex-1 py-3 font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full" }, "退回")))), menu && menuRow && /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-[60]", onClick: () => setMenu(null), onContextMenu: (e) => {
+    }), searching && pages > 1 && /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-pager flex items-center justify-center gap-3 pt-2 text-[0.9em] text-slate-600" }, /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", "aria-label": "上一頁", disabled: page <= 1, onClick: () => setPage(Math.max(1, page - 1)), style: { fontSize: "1.4em" }, className: "tbc-pager-prev w-9 h-9 rounded-full leading-none hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" }, "‹"), /* @__PURE__ */ import_react5.default.createElement(
+      "input",
+      {
+        type: "text",
+        inputMode: "numeric",
+        "aria-label": "頁數",
+        value: pageText,
+        onChange: (e) => setPageText(e.target.value.replace(/\D/g, "")),
+        onKeyDown: (e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        },
+        onFocus: (e) => e.currentTarget.select(),
+        onBlur: () => {
+          const n = parseInt(pageText, 10);
+          const to = Number.isFinite(n) ? Math.min(pages, Math.max(1, n)) : Math.min(page, pages);
+          setPage(to);
+          setPageText(String(to));
+        },
+        className: "tbc-pager-input w-14 h-10 text-center rounded-lg border border-slate-300 bg-white outline-none focus:ring-2 focus:ring-indigo-500/40"
+      }
+    ), /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", "aria-label": "下一頁", disabled: page >= pages, onClick: () => setPage(Math.min(pages, page + 1)), style: { fontSize: "1.4em" }, className: "tbc-pager-next w-9 h-9 rounded-full leading-none hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" }, "›"), /* @__PURE__ */ import_react5.default.createElement("span", { className: "tbc-pager-info" }, "共 ", pages, " 頁")))))), returnInfo && /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm", onClick: () => setReturnInfo(null) }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-return-info bg-white w-full max-w-md rounded-2xl shadow-hover-soft border border-slate-100 overflow-hidden animate-fade-in", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-5 py-4 border-b border-slate-100 flex justify-between items-center" }, /* @__PURE__ */ import_react5.default.createElement("h3", { className: "text-lg font-bold text-slate-900 flex items-center gap-2" }, /* @__PURE__ */ import_react5.default.createElement(RotateCcw, { size: 20, className: "text-amber-600" }), "退回原因"), /* @__PURE__ */ import_react5.default.createElement("button", { "aria-label": "關閉", onClick: () => setReturnInfo(null), className: "p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 20 }))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "p-5 space-y-2" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-return-title font-bold text-slate-900" }, "工作摘要：", returnInfo.item.title), /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-return-reason text-slate-900 whitespace-pre-wrap" }, returnInfo.a.return_note)))), returnTarget && /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "bg-white w-full max-w-md rounded-2xl shadow-hover-soft border border-slate-100 overflow-hidden animate-fade-in" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-5 py-4 border-b border-slate-100 flex justify-between items-center" }, /* @__PURE__ */ import_react5.default.createElement("h3", { className: "text-lg font-bold text-slate-900 flex items-center gap-2" }, /* @__PURE__ */ import_react5.default.createElement(Undo2, { size: 20, className: "text-indigo-600" }), "退回"), /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setReturnTarget(null), className: "p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 20 }))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "p-5 space-y-2" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: "text-xs font-medium text-slate-500" }, "原因（選填）"), /* @__PURE__ */ import_react5.default.createElement("textarea", { autoFocus: true, value: returnText, onChange: (e) => setReturnText(e.target.value), rows: 3, placeholder: "簡要說明", className: "tbc-return-text w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 outline-none text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" })), /* @__PURE__ */ import_react5.default.createElement("div", { className: "p-3 bg-slate-50 flex gap-2 border-t border-slate-100" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setReturnTarget(null), className: "flex-1 py-3 font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-full" }, "取消"), /* @__PURE__ */ import_react5.default.createElement("button", { onClick: doReturn, className: "tbc-return-ok flex-1 py-3 font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full" }, "退回")))), menu && menuRow && /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-[60]", onClick: () => setMenu(null), onContextMenu: (e) => {
       e.preventDefault();
       setMenu(null);
     } }), /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed z-[70] w-52 bg-white rounded-xl shadow-hover-soft border border-slate-100 p-1.5 animate-fade-in", style: { left: menu.x, top: menu.y, fontSize: fs } }, (() => {
