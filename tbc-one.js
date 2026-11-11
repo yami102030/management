@@ -13186,10 +13186,9 @@
     return h(
       "form",
       { onSubmit: submit, className: "w-full max-w-sm mx-auto space-y-3" },
-      h("input", { value: account, onChange: (e) => setAccount(e.target.value), placeholder: isSignUp ? "電話號碼或電子郵件" : "帳號", autoComplete: "username", className: inp }),
-      h("div", { className: "relative" }, h("input", { type: showPw ? "text" : "password", value: password, onChange: (e) => setPassword(e.target.value), placeholder: isSignUp ? "6位以上英數組合" : "密碼", autoComplete: isSignUp ? "new-password" : "current-password", className: inp + " pr-12" }), eye),
-      isSignUp && h("div", { className: "relative" }, h("input", { type: showPw ? "text" : "password", value: password2, onChange: (e) => setPassword2(e.target.value), placeholder: "再次輸入密碼", autoComplete: "new-password", className: inp + " pr-12" })),
-      isSignUp && h("p", { className: "text-xs text-slate-400 px-2" }, "僅限本會弟兄姊妹註冊，「帳號申請」洽行政辦公室"),
+      h("input", { value: account, onChange: (e) => setAccount(e.target.value), placeholder: "帳號", autoComplete: "username", className: inp }),
+      h("div", { className: "relative" }, h("input", { type: showPw ? "text" : "password", value: password, onChange: (e) => { setPassword(e.target.value); setErr(""); }, placeholder: "密碼", autoComplete: isSignUp ? "new-password" : "current-password", className: inp + " pr-12" }), eye),
+      isSignUp && h("div", { className: "relative" }, h("input", { type: showPw ? "text" : "password", value: password2, onChange: (e) => { setPassword2(e.target.value); setErr(""); }, placeholder: "再次輸入密碼", autoComplete: "new-password", className: inp + " pr-12" }), eye),
       msg && h("div", { className: "flex items-center gap-2 text-sm text-red-600 px-2" }, h(AlertCircle, { size: 16, className: "shrink-0" }), msg),
       info && h("div", { className: "text-sm text-indigo-600 px-2" }, info),
       h("button", { type: "submit", disabled: busy || !account.trim() || !password || isSignUp && !password2, className: "w-full h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors disabled:opacity-40" }, busy ? isSignUp ? "處理中…" : "登入中…" : isSignUp ? "註冊" : "登入"),
