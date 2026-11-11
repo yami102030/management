@@ -13125,32 +13125,81 @@
     );
   };
   var LoginCard = ({ supabase: supabase2, notice }) => {
+    const h = import_react3.default.createElement;
+    const [mode, setMode] = (0, import_react3.useState)(window.location.hash === "#signup" ? "signup" : "login");
     const [showPw, setShowPw] = (0, import_react3.useState)(false);
     const [account, setAccount] = (0, import_react3.useState)("");
     const [password, setPassword] = (0, import_react3.useState)("");
+    const [password2, setPassword2] = (0, import_react3.useState)("");
     const [busy, setBusy] = (0, import_react3.useState)(false);
     const [err, setErr] = (0, import_react3.useState)("");
+    const [info, setInfo] = (0, import_react3.useState)("");
+    const isSignUp = mode === "signup";
+    const switchMode = (m) => {
+      setMode(m);
+      setErr("");
+      setInfo("");
+      setPassword("");
+      setPassword2("");
+      setShowPw(false);
+    };
     const submit = async (e) => {
       e.preventDefault();
       if (!account.trim() || !password || busy) return;
-      setBusy(true);
       setErr("");
+      setInfo("");
+      if (isSignUp) {
+        if (password !== password2) return setErr("兩次輸入的密碼不同");
+        if (password.length < 6) return setErr("密碼長度至少需 6 個字元");
+        setBusy(true);
+        try {
+          const { data: ok, error: ce } = await supabase2.rpc("check_member_exists", { p_account: account });
+          if (ce) throw new Error("驗證時發生錯誤，再試一次，或聯絡行政辦公室");
+          if (!ok) throw new Error("查無此帳號，再試一次，或聯絡行政辦公室");
+          const { data, error } = await supabase2.auth.signUp({ email: toLoginEmail(account), password });
+          const fake = data && data.user && data.user.identities && data.user.identities.length === 0;
+          if (fake || !error && (!data || !data.user)) throw new Error("帳號已經註冊過了");
+          if (error) throw error;
+          setPassword("");
+          setPassword2("");
+          setShowPw(false);
+          setMode("login");
+          setInfo("註冊成功，請用剛設定的密碼登入");
+        } catch (e2) {
+          let m = e2.message || "註冊失敗，請再試一次";
+          if (m.includes("Password should be at least")) m = "密碼長度至少需 6 個字元";
+          if (m.includes("already registered")) m = "帳號已經註冊過了";
+          setErr(m);
+        }
+        setBusy(false);
+        return;
+      }
+      setBusy(true);
       const { error } = await supabase2.auth.signInWithPassword({ email: toLoginEmail(account), password });
       setBusy(false);
       if (error) setErr("帳號或密碼不正確，請再試一次");
     };
     const inp = "w-full h-12 px-4 rounded-full bg-slate-100 outline-none text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/40 transition-colors";
-    return /* @__PURE__ */ import_react3.default.createElement("form", { onSubmit: submit, className: "w-full max-w-sm mx-auto space-y-3" }, /* @__PURE__ */ import_react3.default.createElement("input", { value: account, onChange: (e) => setAccount(e.target.value), placeholder: "帳號", autoComplete: "username", className: inp }), /* @__PURE__ */ import_react3.default.createElement("div", { className: "relative" }, /* @__PURE__ */ import_react3.default.createElement("input", { type: showPw ? "text" : "password", value: password, onChange: (e) => setPassword(e.target.value), placeholder: "密碼", autoComplete: "current-password", className: inp + " pr-12" }), /* @__PURE__ */ import_react3.default.createElement(
-      "button",
-      {
-        type: "button",
-        onClick: () => setShowPw((v) => !v),
-        title: showPw ? "隱藏密碼" : "顯示密碼",
-        "aria-label": showPw ? "隱藏密碼" : "顯示密碼",
-        className: "absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-      },
-      showPw ? /* @__PURE__ */ import_react3.default.createElement(EyeOff, { size: 18 }) : /* @__PURE__ */ import_react3.default.createElement(Eye, { size: 18 })
-    )), (err || notice) && /* @__PURE__ */ import_react3.default.createElement("div", { className: "flex items-center gap-2 text-sm text-red-600 px-2" }, /* @__PURE__ */ import_react3.default.createElement(AlertCircle, { size: 16 }), err || notice), /* @__PURE__ */ import_react3.default.createElement("button", { type: "submit", disabled: busy || !account.trim() || !password, className: "w-full h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors disabled:opacity-40" }, busy ? "登入中…" : "登入"));
+    const eye = h("button", { type: "button", onClick: () => setShowPw((v) => !v), title: showPw ? "隱藏密碼" : "顯示密碼", "aria-label": showPw ? "隱藏密碼" : "顯示密碼", className: "absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" }, showPw ? h(EyeOff, { size: 18 }) : h(Eye, { size: 18 }));
+    const link = (label, onClick) => h("button", { type: "button", onClick, className: "text-indigo-600 font-semibold hover:underline" }, label);
+    const msg = err || (!isSignUp ? notice : "");
+    return h(
+      "form",
+      { onSubmit: submit, className: "w-full max-w-sm mx-auto space-y-3" },
+      h("input", { value: account, onChange: (e) => setAccount(e.target.value), placeholder: isSignUp ? "電話號碼或電子郵件" : "帳號", autoComplete: "username", className: inp }),
+      h("div", { className: "relative" }, h("input", { type: showPw ? "text" : "password", value: password, onChange: (e) => setPassword(e.target.value), placeholder: isSignUp ? "6位以上英數組合" : "密碼", autoComplete: isSignUp ? "new-password" : "current-password", className: inp + " pr-12" }), eye),
+      isSignUp && h("div", { className: "relative" }, h("input", { type: showPw ? "text" : "password", value: password2, onChange: (e) => setPassword2(e.target.value), placeholder: "再次輸入密碼", autoComplete: "new-password", className: inp + " pr-12" })),
+      isSignUp && h("p", { className: "text-xs text-slate-400 px-2" }, "僅限本會弟兄姊妹註冊，「帳號申請」洽行政辦公室"),
+      msg && h("div", { className: "flex items-center gap-2 text-sm text-red-600 px-2" }, h(AlertCircle, { size: 16, className: "shrink-0" }), msg),
+      info && h("div", { className: "text-sm text-indigo-600 px-2" }, info),
+      h("button", { type: "submit", disabled: busy || !account.trim() || !password || isSignUp && !password2, className: "w-full h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors disabled:opacity-40" }, busy ? isSignUp ? "處理中…" : "登入中…" : isSignUp ? "註冊" : "登入"),
+      h(
+        "div",
+        { className: "text-center text-sm text-slate-500", style: { paddingTop: 16 } },
+        isSignUp ? h("p", null, "已有帳號？", link("登入", () => switchMode("login"))) : h("p", null, "首次設定密碼？請", link("點這裡", () => switchMode("signup"))),
+        !isSignUp && h("p", { className: "text-slate-400", style: { marginTop: 12 } }, "沒有帳號、忘記密碼？請聯絡行政辦公室")
+      )
+    );
   };
   var UserChip = ({ shell }) => {
     const id = shell.identity || {};
@@ -14682,7 +14731,7 @@
     };
     if (session === void 0) return /* @__PURE__ */ import_react6.default.createElement("div", { className: "h-[100dvh] bg-white" });
     if (!session) {
-      return /* @__PURE__ */ import_react6.default.createElement("div", { className: "min-h-[100dvh] bg-white flex flex-col items-center justify-center px-6" }, /* @__PURE__ */ import_react6.default.createElement("div", { className: "w-14 h-14 rounded-full border-2 border-[#7e00c8] text-[#7e00c8] flex items-center justify-center mb-5" }, /* @__PURE__ */ import_react6.default.createElement(Aperture, { size: 30 })), /* @__PURE__ */ import_react6.default.createElement("h1", { className: "text-4xl font-semibold text-slate-900" }, "TBC ONE"), /* @__PURE__ */ import_react6.default.createElement("p", { className: "mt-3 mb-10 text-slate-500" }, "One God. One Church. One Mission."), /* @__PURE__ */ import_react6.default.createElement(LoginCard, { supabase, notice: denyMsg }), import_react6.default.createElement("div", { className: "text-center text-sm text-slate-500", style: { marginTop: 28 } }, import_react6.default.createElement("p", null, "首次設定密碼？請", import_react6.default.createElement("a", { href: window.TBC_CONFIG.CENTER_URL + "manager.html?from=one#signup", className: "text-indigo-600 font-semibold hover:underline" }, "點這裡")), import_react6.default.createElement("p", { className: "text-slate-400", style: { marginTop: 12 } }, "沒有帳號、忘記密碼？請聯絡行政辦公室")));
+      return /* @__PURE__ */ import_react6.default.createElement("div", { className: "min-h-[100dvh] bg-white flex flex-col items-center justify-center px-6" }, /* @__PURE__ */ import_react6.default.createElement("div", { className: "w-14 h-14 rounded-full border-2 border-[#7e00c8] text-[#7e00c8] flex items-center justify-center mb-5" }, /* @__PURE__ */ import_react6.default.createElement(Aperture, { size: 30 })), /* @__PURE__ */ import_react6.default.createElement("h1", { className: "text-4xl font-semibold text-slate-900" }, "TBC ONE"), /* @__PURE__ */ import_react6.default.createElement("p", { className: "mt-3 mb-10 text-slate-500" }, "One God. One Church. One Mission."), /* @__PURE__ */ import_react6.default.createElement(LoginCard, { supabase, notice: denyMsg }));
     }
     if (identity.status !== "ok") return /* @__PURE__ */ import_react6.default.createElement("div", { className: "h-[100dvh] bg-white" });
     const shell = { identity, onLogout };
