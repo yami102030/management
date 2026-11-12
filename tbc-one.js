@@ -13324,7 +13324,7 @@
     return m || "發生未知錯誤";
   };
   var ruleSummary = (r) => {
-    if (r.freq === "daily") return r.weekdays_only ? "每天（週二到週日）" : "每天";
+    if (r.freq === "daily") return r.weekdays_only ? "每天（週二至週日）" : "每天";
     if (r.freq === "weekly") return "每週 " + [...r.week_days || []].sort((a, b) => a - b).map((n) => WD[n % 7]).join("、");
     const parts = [];
     if (r.month_day) parts.push(`${r.month_day} 號`);
@@ -13734,7 +13734,7 @@
         className: `h-8 px-4 rounded-md text-xs font-medium transition-all ${repeat === k ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`
       },
       t
-    ))), repeat === "daily" && /* @__PURE__ */ import_react5.default.createElement("label", { className: "flex items-center gap-2 text-sm text-slate-600 pt-1 cursor-pointer select-none" }, /* @__PURE__ */ import_react5.default.createElement("input", { type: "checkbox", checked: weekdaysOnly, onChange: (e) => setWeekdaysOnly(e.target.checked), className: "accent-indigo-600" }), " 只排週二到週日"), repeat === "weekly" && /* @__PURE__ */ import_react5.default.createElement("div", { id: "tbc-f-week", tabIndex: -1, className: `flex gap-2 pt-1 flex-wrap outline-none rounded-lg ${bad === "tbc-f-week" ? "ring-2 ring-red-200" : ""}` }, [1, 2, 3, 4, 5, 6, 7].map((n) => /* @__PURE__ */ import_react5.default.createElement(
+    ))), repeat === "daily" && /* @__PURE__ */ import_react5.default.createElement("label", { className: "flex items-center gap-2 text-sm text-slate-600 pt-1 cursor-pointer select-none" }, /* @__PURE__ */ import_react5.default.createElement("input", { type: "checkbox", checked: weekdaysOnly, onChange: (e) => setWeekdaysOnly(e.target.checked), className: "accent-indigo-600" }), " 僅排週二至週日"), repeat === "weekly" && /* @__PURE__ */ import_react5.default.createElement("div", { id: "tbc-f-week", tabIndex: -1, className: `flex gap-2 pt-1 flex-wrap outline-none rounded-lg ${bad === "tbc-f-week" ? "ring-2 ring-red-200" : ""}` }, [1, 2, 3, 4, 5, 6, 7].map((n) => /* @__PURE__ */ import_react5.default.createElement(
       "button",
       {
         key: n,
@@ -14249,18 +14249,6 @@
       }
       return n;
     });
-    const moveCol = (id, dir) => {
-      const vis = visibleCols.map((c) => c.id);
-      const t = vis[vis.indexOf(id) + dir];
-      if (t) reorderCol(id, t);
-    };
-    const resetColOrder = () => {
-      setColOrder([]);
-      try {
-        localStorage.removeItem("tbcWorkColOrder");
-      } catch (e) {
-      }
-    };
     const colDragProps = (c) => {
       const vi = (id) => visibleCols.findIndex((x) => x.id === id);
       const showMark = colDrag && colOver === c.id && colDrag !== c.id;
@@ -14769,12 +14757,7 @@
         "aria-label": "搜尋",
         className: "flex-1 min-w-0 bg-transparent outline-none text-[0.9em] text-slate-900 placeholder:text-slate-400"
       }
-    ), searchText && /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", onClick: () => setSearchText(""), title: "清除搜尋", "aria-label": "清除搜尋", className: "text-slate-400 hover:text-slate-700" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 14 })))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex items-center gap-3 shrink-0" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setModal({ mode: "create" }), className: "h-11 px-5 rounded-full text-[0.9em] font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors flex items-center gap-1 whitespace-nowrap" }, /* @__PURE__ */ import_react5.default.createElement(Plus, { size: 16 }), "新增"), /* @__PURE__ */ import_react5.default.createElement("div", { className: segBox }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: openRules, className: segBtn(false) }, /* @__PURE__ */ import_react5.default.createElement(Plus, { size: 14, className: "text-slate-500" }), "週期工作")), /* @__PURE__ */ import_react5.default.createElement("div", { className: "relative" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setColMenuOpen((v) => !v), className: `${segBox} !p-1.5` }, /* @__PURE__ */ import_react5.default.createElement("span", { className: segBtn(colMenuOpen) }, /* @__PURE__ */ import_react5.default.createElement(EyeOff, { size: 14, className: "text-slate-500" }), "欄位")), colMenuOpen && /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-30", onClick: () => setColMenuOpen(false) }), /* @__PURE__ */ import_react5.default.createElement("div", { className: "absolute right-0 top-full mt-2 z-40 w-64 bg-white rounded-xl shadow-hover-soft border border-slate-100 p-2 animate-fade-in" }, orderedCols.map((c) => {
-          const hidden = !c.locked && hiddenCols.includes(c.id);
-          const vi = visibleCols.findIndex((x) => x.id === c.id);
-          const arrowCls = "p-1 rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
-          return hx("div", { key: c.id, className: "flex items-center gap-1 px-2 py-1 rounded-lg text-[0.9em] text-slate-700 hover:bg-slate-50 select-none" }, hx("label", { className: `flex items-center gap-2 flex-1 min-w-0 ${c.locked ? "text-slate-400" : "cursor-pointer"}` }, hx("input", { type: "checkbox", disabled: c.locked, checked: c.locked || !hidden, onChange: () => toggleCol(c.id), className: "accent-indigo-600" }), c.label, c.locked && hx(Lock, { size: 11 })), hx("button", { type: "button", "aria-label": `${c.label}往左移`, title: "往左移", disabled: vi <= 0, onClick: () => moveCol(c.id, -1), className: arrowCls }, hx(ChevronRight, { size: 14, className: "rotate-180" })), hx("button", { type: "button", "aria-label": `${c.label}往右移`, title: "往右移", disabled: vi < 0 || vi >= visibleCols.length - 1, onClick: () => moveCol(c.id, 1), className: arrowCls }, hx(ChevronRight, { size: 14 })));
-        }), hx("button", { type: "button", onClick: resetColOrder, className: "mt-1 w-full text-center text-[0.85em] text-slate-500 hover:text-indigo-600 py-1.5 rounded-lg hover:bg-slate-50" }, "還原欄位順序")))), /* @__PURE__ */ import_react5.default.createElement("div", { className: segBox, title: "文字大小" }, [["m", "標準", 15], ["l", "大", 19]].map(([k, t, px]) => /* @__PURE__ */ import_react5.default.createElement(
+    ), searchText && /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", onClick: () => setSearchText(""), title: "清除搜尋", "aria-label": "清除搜尋", className: "text-slate-400 hover:text-slate-700" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 14 })))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex items-center gap-3 shrink-0" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setModal({ mode: "create" }), className: "h-11 px-5 rounded-full text-[0.9em] font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors flex items-center gap-1 whitespace-nowrap" }, /* @__PURE__ */ import_react5.default.createElement(Plus, { size: 16 }), "新增"), /* @__PURE__ */ import_react5.default.createElement("div", { className: segBox }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: openRules, className: segBtn(false) }, /* @__PURE__ */ import_react5.default.createElement(Plus, { size: 14, className: "text-slate-500" }), "週期工作")), /* @__PURE__ */ import_react5.default.createElement("div", { className: "relative" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setColMenuOpen((v) => !v), className: `${segBox} !p-1.5` }, /* @__PURE__ */ import_react5.default.createElement("span", { className: segBtn(colMenuOpen) }, /* @__PURE__ */ import_react5.default.createElement(EyeOff, { size: 14, className: "text-slate-500" }), "隱藏")), colMenuOpen && /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-30", onClick: () => setColMenuOpen(false) }), /* @__PURE__ */ import_react5.default.createElement("div", { className: "absolute right-0 top-full mt-2 z-40 w-52 bg-white rounded-xl shadow-hover-soft border border-slate-100 p-2 animate-fade-in" }, COLS.filter((c) => !c.locked).map((c) => /* @__PURE__ */ import_react5.default.createElement("label", { key: c.id, className: `flex items-center gap-2 px-2 py-1.5 rounded-lg text-[0.9em] select-none ${c.locked ? "text-slate-300" : "text-slate-700 hover:bg-slate-50 cursor-pointer"}` }, /* @__PURE__ */ import_react5.default.createElement("input", { type: "checkbox", disabled: c.locked, checked: c.locked || !hiddenCols.includes(c.id), onChange: () => toggleCol(c.id), className: "accent-indigo-600" }), c.label, c.locked && /* @__PURE__ */ import_react5.default.createElement(Lock, { size: 11 })))))), /* @__PURE__ */ import_react5.default.createElement("div", { className: segBox, title: "文字大小" }, [["m", "標準", 15], ["l", "大", 19]].map(([k, t, px]) => /* @__PURE__ */ import_react5.default.createElement(
       "button",
       {
         key: k,
