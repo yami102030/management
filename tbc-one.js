@@ -13238,12 +13238,13 @@
     { id: "who", label: "派工", sortable: true, w: (fs) => `${Math.ceil(fs * 4 + 22)}px`, min: (fs) => Math.ceil(fs * 4 + 22) },
     { id: "doer", label: "執行", sortable: true, w: (fs) => `${Math.ceil(fs * 4 + 22)}px`, min: (fs) => Math.ceil(fs * 4 + 22) },
     { id: "status", label: "狀態", sortable: true, w: (fs) => `${Math.ceil(fs * 0.85 * 4 + 100)}px`, min: (fs) => Math.ceil(fs * 0.85 * 4 + 100) },
-    { id: "date", label: "日期", sortable: true, w: "minmax(96px,0.9fr)", min: 96 },
+    { id: "date", label: "日期", sortable: true, w: (fs, o) => `${dateColW(fs, o)}px`, min: (fs, o) => dateColW(fs, o) },
     { id: "time", label: "時間", w: "minmax(150px,1fr)", min: 150 },
     { id: "hours", label: "工時", sortable: true, w: (fs) => `${Math.ceil(fs * 4.8 + 24)}px`, min: (fs) => Math.ceil(fs * 4.8 + 24) },
     { id: "priority", label: "優先順序", sortable: true, w: (fs) => `${Math.ceil(fs * 0.85 * 4 + 52)}px`, min: (fs) => Math.ceil(fs * 0.85 * 4 + 52) },
     { id: "note", label: "備註", w: "minmax(120px,1.5fr)", min: 120 }
   ];
+  var dateColW = (fs, o) => Math.ceil(fs * (o && o.dateMulti ? 7 : 2.8) + 26);
   var TZ = "Asia/Taipei";
   var getNow = () => {
     const s = new Intl.DateTimeFormat("sv-SE", {
@@ -13323,7 +13324,7 @@
     return m || "發生未知錯誤";
   };
   var ruleSummary = (r) => {
-    if (r.freq === "daily") return r.weekdays_only ? "每天（週一到週五）" : "每天";
+    if (r.freq === "daily") return r.weekdays_only ? "每天（週二到週日）" : "每天";
     if (r.freq === "weekly") return "每週 " + [...r.week_days || []].sort((a, b) => a - b).map((n) => WD[n % 7]).join("、");
     const parts = [];
     if (r.month_day) parts.push(`${r.month_day} 號`);
@@ -13733,7 +13734,7 @@
         className: `h-8 px-4 rounded-md text-xs font-medium transition-all ${repeat === k ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`
       },
       t
-    ))), repeat === "daily" && /* @__PURE__ */ import_react5.default.createElement("label", { className: "flex items-center gap-2 text-sm text-slate-600 pt-1 cursor-pointer select-none" }, /* @__PURE__ */ import_react5.default.createElement("input", { type: "checkbox", checked: weekdaysOnly, onChange: (e) => setWeekdaysOnly(e.target.checked), className: "accent-indigo-600" }), " 只排週一到週五"), repeat === "weekly" && /* @__PURE__ */ import_react5.default.createElement("div", { id: "tbc-f-week", tabIndex: -1, className: `flex gap-2 pt-1 flex-wrap outline-none rounded-lg ${bad === "tbc-f-week" ? "ring-2 ring-red-200" : ""}` }, [1, 2, 3, 4, 5, 6, 7].map((n) => /* @__PURE__ */ import_react5.default.createElement(
+    ))), repeat === "daily" && /* @__PURE__ */ import_react5.default.createElement("label", { className: "flex items-center gap-2 text-sm text-slate-600 pt-1 cursor-pointer select-none" }, /* @__PURE__ */ import_react5.default.createElement("input", { type: "checkbox", checked: weekdaysOnly, onChange: (e) => setWeekdaysOnly(e.target.checked), className: "accent-indigo-600" }), " 只排週二到週日"), repeat === "weekly" && /* @__PURE__ */ import_react5.default.createElement("div", { id: "tbc-f-week", tabIndex: -1, className: `flex gap-2 pt-1 flex-wrap outline-none rounded-lg ${bad === "tbc-f-week" ? "ring-2 ring-red-200" : ""}` }, [1, 2, 3, 4, 5, 6, 7].map((n) => /* @__PURE__ */ import_react5.default.createElement(
       "button",
       {
         key: n,
@@ -13832,6 +13833,34 @@
       return n;
     });
     const [colMenuOpen, setColMenuOpen] = (0, import_react5.useState)(false);
+    const hx = import_react5.default.createElement;
+    const [colOrder, setColOrder] = (0, import_react5.useState)(() => {
+      try {
+        const v = JSON.parse(localStorage.getItem("tbcWorkColOrder") || "[]");
+        return Array.isArray(v) ? v : [];
+      } catch (e) {
+        return [];
+      }
+    });
+    const [colDrag, setColDrag] = (0, import_react5.useState)(null);
+    const [colOver, setColOver] = (0, import_react5.useState)(null);
+    const readOpen = (k) => {
+      try {
+        return localStorage.getItem(k) !== "0";
+      } catch (e) {
+        return true;
+      }
+    };
+    const [overdueOpen, setOverdueOpen] = (0, import_react5.useState)(() => readOpen("tbcWorkOverdueOpen"));
+    const [holdOpen, setHoldOpen] = (0, import_react5.useState)(() => readOpen("tbcWorkHoldOpen"));
+    const flipOpen = (key, set) => set((v) => {
+      const n = !v;
+      try {
+        localStorage.setItem(key, n ? "1" : "0");
+      } catch (e) {
+      }
+      return n;
+    });
     const [quickTitle, setQuickTitle] = (0, import_react5.useState)("");
     const [quickDate, setQuickDate] = (0, import_react5.useState)("");
     const [busy, setBusy] = (0, import_react5.useState)(false);
@@ -13936,8 +13965,9 @@
         };
         const a = ok(await fetchAll(() => supabase2.from("work_items").select("*, work_assignees(*)").is("canceled_at", null).is("parent_id", null).lte("start_date", range.end).gte("end_date", range.start)));
         const od = ok(await fetchAll(() => supabase2.from("work_items").select("id, work_assignees!inner(id)").is("canceled_at", null).is("parent_id", null).lte("end_date", today).neq("work_assignees.status", "done").is("work_assignees.skipped_at", null)));
+        const hd = ok(await fetchAll(() => supabase2.from("work_items").select("id, work_assignees!inner(id)").is("canceled_at", null).is("parent_id", null).eq("work_assignees.status", "on_hold")));
         const have = new Set(a.map((x) => x.id));
-        const needIds = od.map((x) => x.id).filter((id) => !have.has(id));
+        const needIds = [...od, ...hd].map((x) => x.id).filter((id, i, arr) => !have.has(id) && arr.indexOf(id) === i);
         let extra = [];
         if (needIds.length) {
           extra = ok(await fetchAll(() => supabase2.from("work_items").select("*, work_assignees(*)").in("id", needIds)));
@@ -14094,7 +14124,7 @@
       };
     };
     const searching = kw !== "" && viewWho !== "notice";
-    const { overdueRows, groups, total, pages } = (0, import_react5.useMemo)(() => {
+    const { overdueRows, holdRows, groups, total, pages } = (0, import_react5.useMemo)(() => {
       const inView = (r) => viewWho === "mine" ? r.isMine : viewWho === "tome" ? r.isMine && !r.isCreator : viewWho === "dispatched" ? r.canManage && !r.isMine : selected.has(r.a.member_id);
       if (searching) {
         const found = searchFlat.map(decorate).filter(inView).sort((x, y) => y.item.start_date.localeCompare(x.item.start_date) || (hhmm(x.item.start_time) || "99:99").localeCompare(hhmm(y.item.start_time) || "99:99") || x.a.sort_order - y.a.sort_order);
@@ -14106,12 +14136,14 @@
           (byD[r.item.start_date] = byD[r.item.start_date] || []).push(r);
         });
         const gs0 = Object.keys(byD).sort().reverse().map((date) => ({ date, rows: byD[date], canMove: false }));
-        return { overdueRows: [], groups: gs0, total: found.length, pages: nPages };
+        return { overdueRows: [], holdRows: [], groups: gs0, total: found.length, pages: nPages };
       }
       const rows = flat.map(decorate);
       const vis = rows.filter(inView);
       const od = vis.filter((r) => r.overdue).sort((x, y) => (x.item.end_date + hhmm(x.item.end_time)).localeCompare(y.item.end_date + hhmm(y.item.end_time)) || (x.person && x.person.name || "").localeCompare(y.person && y.person.name || ""));
-      const inR = vis.filter((r) => !r.overdue && r.item.start_date <= range.end && r.item.end_date >= range.start);
+      const isHold = (r) => r.skipped && !r.done && !r.awaiting;
+      const hold = vis.filter(isHold).sort((x, y) => (x.item.start_date + hhmm(x.item.start_time)).localeCompare(y.item.start_date + hhmm(y.item.start_time)) || (x.person && x.person.name || "").localeCompare(y.person && y.person.name || ""));
+      const inR = vis.filter((r) => !r.overdue && !isHold(r) && r.item.start_date <= range.end && r.item.end_date >= range.start);
       const byDate = {};
       inR.forEach((r) => {
         (byDate[r.item.start_date] = byDate[r.item.start_date] || []).push(r);
@@ -14126,7 +14158,7 @@
         const canMove = viewWho === "mine" && date >= range.start;
         return { date, rows: list, canMove };
       });
-      let od2 = od, gs2 = gs;
+      let od2 = od, hd2 = hold, gs2 = gs;
       if (sort.col) {
         const k = sort.dir === "asc" ? 1 : -1;
         const zh = (a, b) => String(a || "").localeCompare(String(b || ""), "zh-Hant");
@@ -14152,15 +14184,17 @@
           const by = (list) => [...list].sort((x, y) => k * c(x, y));
           if (sort.col === "date") {
             od2 = by(od);
+            hd2 = by(hold);
             gs2 = [...gs].sort((x, y) => k * x.date.localeCompare(y.date));
           } else {
             od2 = by(od);
+            hd2 = by(hold);
             gs2 = gs.map((g) => ({ ...g, rows: by(g.rows) }));
           }
         }
         gs2 = gs2.map((g) => ({ ...g, canMove: false }));
       }
-      return { overdueRows: od2, groups: gs2, total: od.length + inR.length, pages: 1 };
+      return { overdueRows: od2, holdRows: hd2, groups: gs2, total: od.length + hold.length + inR.length, pages: 1 };
     }, [flat, now, me, viewWho, selected, range, peopleMap, searching, searchFlat, page, sort]);
     (0, import_react5.useEffect)(() => {
       if (page > pages) setPage(pages);
@@ -14187,9 +14221,81 @@
       });
       return noticeFlat.map(decorate).filter((r) => (r.canManage || r.isMine) && r.item.id in when).map((r) => ({ ...r, notice: true, changedFields: changed[r.item.id] || [] })).sort((x, y) => String(when[y.item.id] || "").localeCompare(String(when[x.item.id] || "")));
     }, [noticeFlat, notes, me, peopleMap, now]);
-    const visibleCols = COLS.filter((c) => c.locked || !hiddenCols.includes(c.id));
-    const colW = (c) => typeof c.w === "function" ? c.w(fs) : c.w;
-    const colMin = (c) => typeof c.min === "function" ? c.min(fs) : c.min;
+    const dateMulti = (0, import_react5.useMemo)(() => [flat, subFlat, searchFlat, searchSubFlat, noticeFlat].some((l) => l.some((r) => r.item.start_date !== r.item.end_date)), [flat, subFlat, searchFlat, searchSubFlat, noticeFlat]);
+    const colCtx = { dateMulti };
+    const normOrder = (o) => {
+      const ids = COLS.map((c) => c.id);
+      const out = [];
+      (o || []).forEach((id) => {
+        if (ids.includes(id) && !out.includes(id)) out.push(id);
+      });
+      ids.forEach((id) => {
+        if (!out.includes(id)) out.push(id);
+      });
+      return out;
+    };
+    const orderedCols = normOrder(colOrder).map((id) => COLS.find((c) => c.id === id));
+    const visibleCols = orderedCols.filter((c) => c.locked || !hiddenCols.includes(c.id));
+    const reorderCol = (from, to) => setColOrder((o0) => {
+      const base = normOrder(o0);
+      const a = base.indexOf(from), b = base.indexOf(to);
+      if (a < 0 || b < 0 || a === b) return o0;
+      const n = [...base];
+      n.splice(a, 1);
+      n.splice(b, 0, from);
+      try {
+        localStorage.setItem("tbcWorkColOrder", JSON.stringify(n));
+      } catch (e) {
+      }
+      return n;
+    });
+    const moveCol = (id, dir) => {
+      const vis = visibleCols.map((c) => c.id);
+      const t = vis[vis.indexOf(id) + dir];
+      if (t) reorderCol(id, t);
+    };
+    const resetColOrder = () => {
+      setColOrder([]);
+      try {
+        localStorage.removeItem("tbcWorkColOrder");
+      } catch (e) {
+      }
+    };
+    const colDragProps = (c) => {
+      const vi = (id) => visibleCols.findIndex((x) => x.id === id);
+      const showMark = colDrag && colOver === c.id && colDrag !== c.id;
+      return {
+        draggable: true,
+        onDragStart: (e) => {
+          setColDrag(c.id);
+          try {
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", c.id);
+          } catch (x) {
+          }
+        },
+        onDragOver: (e) => {
+          if (colDrag) {
+            e.preventDefault();
+            if (colOver !== c.id) setColOver(c.id);
+          }
+        },
+        onDrop: (e) => {
+          e.preventDefault();
+          if (colDrag && colDrag !== c.id) reorderCol(colDrag, c.id);
+          setColDrag(null);
+          setColOver(null);
+        },
+        onDragEnd: () => {
+          setColDrag(null);
+          setColOver(null);
+        },
+        style: showMark ? { boxShadow: `inset ${vi(colDrag) < vi(c.id) ? "-3px" : "3px"} 0 0 #6366f1`, background: "#e0e7ff" } : void 0,
+        title: c.sortable ? "點一下排序；拖曳可左右移動欄位" : "拖曳可左右移動欄位"
+      };
+    };
+    const colW = (c) => typeof c.w === "function" ? c.w(fs, colCtx) : c.w;
+    const colMin = (c) => typeof c.min === "function" ? c.min(fs, colCtx) : c.min;
     const tpl = `56px ${visibleCols.map(colW).join(" ")}`;
     const listMinWidth = 56 + visibleCols.reduce((n, c) => n + colMin(c), 0) + 16;
     const saveItem = (row, patch, okText) => act(() => {
@@ -14489,7 +14595,7 @@
     };
     const segBox = "flex items-center bg-slate-100 p-1 rounded-full shrink-0";
     const segBtn = (on) => `h-8 px-4 rounded-full text-[0.8em] font-medium transition-all duration-200 whitespace-nowrap flex items-center gap-1.5 ${on ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`;
-    const menuRow = menu ? [...overdueRows, ...groups.flatMap((g) => g.rows), ...noticeRows, ...Object.values(subMap).flat()].find((r) => r.key === menu.key) : null;
+    const menuRow = menu ? [...overdueRows, ...holdRows, ...groups.flatMap((g) => g.rows), ...noticeRows, ...Object.values(subMap).flat()].find((r) => r.key === menu.key) : null;
     const menuGroup = menuRow ? groups.find((g) => g.rows.some((r) => r.key === menuRow.key)) : null;
     const renderRow = (r, g) => {
       const red = (f) => !!(r.notice && r.changedFields && r.changedFields.includes(f));
@@ -14663,7 +14769,12 @@
         "aria-label": "搜尋",
         className: "flex-1 min-w-0 bg-transparent outline-none text-[0.9em] text-slate-900 placeholder:text-slate-400"
       }
-    ), searchText && /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", onClick: () => setSearchText(""), title: "清除搜尋", "aria-label": "清除搜尋", className: "text-slate-400 hover:text-slate-700" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 14 })))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex items-center gap-3 shrink-0" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setModal({ mode: "create" }), className: "h-11 px-5 rounded-full text-[0.9em] font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors flex items-center gap-1 whitespace-nowrap" }, /* @__PURE__ */ import_react5.default.createElement(Plus, { size: 16 }), "新增"), /* @__PURE__ */ import_react5.default.createElement("div", { className: segBox }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: openRules, className: segBtn(false) }, /* @__PURE__ */ import_react5.default.createElement(Plus, { size: 14, className: "text-slate-500" }), "週期工作")), /* @__PURE__ */ import_react5.default.createElement("div", { className: "relative" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setColMenuOpen((v) => !v), className: `${segBox} !p-1.5` }, /* @__PURE__ */ import_react5.default.createElement("span", { className: segBtn(colMenuOpen) }, /* @__PURE__ */ import_react5.default.createElement(EyeOff, { size: 14, className: "text-slate-500" }), "隱藏")), colMenuOpen && /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-30", onClick: () => setColMenuOpen(false) }), /* @__PURE__ */ import_react5.default.createElement("div", { className: "absolute right-0 top-full mt-2 z-40 w-52 bg-white rounded-xl shadow-hover-soft border border-slate-100 p-2 animate-fade-in" }, COLS.filter((c) => !c.locked).map((c) => /* @__PURE__ */ import_react5.default.createElement("label", { key: c.id, className: `flex items-center gap-2 px-2 py-1.5 rounded-lg text-[0.9em] select-none ${c.locked ? "text-slate-300" : "text-slate-700 hover:bg-slate-50 cursor-pointer"}` }, /* @__PURE__ */ import_react5.default.createElement("input", { type: "checkbox", disabled: c.locked, checked: c.locked || !hiddenCols.includes(c.id), onChange: () => toggleCol(c.id), className: "accent-indigo-600" }), c.label, c.locked && /* @__PURE__ */ import_react5.default.createElement(Lock, { size: 11 })))))), /* @__PURE__ */ import_react5.default.createElement("div", { className: segBox, title: "文字大小" }, [["m", "標準", 15], ["l", "大", 19]].map(([k, t, px]) => /* @__PURE__ */ import_react5.default.createElement(
+    ), searchText && /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", onClick: () => setSearchText(""), title: "清除搜尋", "aria-label": "清除搜尋", className: "text-slate-400 hover:text-slate-700" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 14 })))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex items-center gap-3 shrink-0" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setModal({ mode: "create" }), className: "h-11 px-5 rounded-full text-[0.9em] font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors flex items-center gap-1 whitespace-nowrap" }, /* @__PURE__ */ import_react5.default.createElement(Plus, { size: 16 }), "新增"), /* @__PURE__ */ import_react5.default.createElement("div", { className: segBox }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: openRules, className: segBtn(false) }, /* @__PURE__ */ import_react5.default.createElement(Plus, { size: 14, className: "text-slate-500" }), "週期工作")), /* @__PURE__ */ import_react5.default.createElement("div", { className: "relative" }, /* @__PURE__ */ import_react5.default.createElement("button", { onClick: () => setColMenuOpen((v) => !v), className: `${segBox} !p-1.5` }, /* @__PURE__ */ import_react5.default.createElement("span", { className: segBtn(colMenuOpen) }, /* @__PURE__ */ import_react5.default.createElement(EyeOff, { size: 14, className: "text-slate-500" }), "欄位")), colMenuOpen && /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-30", onClick: () => setColMenuOpen(false) }), /* @__PURE__ */ import_react5.default.createElement("div", { className: "absolute right-0 top-full mt-2 z-40 w-64 bg-white rounded-xl shadow-hover-soft border border-slate-100 p-2 animate-fade-in" }, orderedCols.map((c) => {
+          const hidden = !c.locked && hiddenCols.includes(c.id);
+          const vi = visibleCols.findIndex((x) => x.id === c.id);
+          const arrowCls = "p-1 rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+          return hx("div", { key: c.id, className: "flex items-center gap-1 px-2 py-1 rounded-lg text-[0.9em] text-slate-700 hover:bg-slate-50 select-none" }, hx("label", { className: `flex items-center gap-2 flex-1 min-w-0 ${c.locked ? "text-slate-400" : "cursor-pointer"}` }, hx("input", { type: "checkbox", disabled: c.locked, checked: c.locked || !hidden, onChange: () => toggleCol(c.id), className: "accent-indigo-600" }), c.label, c.locked && hx(Lock, { size: 11 })), hx("button", { type: "button", "aria-label": `${c.label}往左移`, title: "往左移", disabled: vi <= 0, onClick: () => moveCol(c.id, -1), className: arrowCls }, hx(ChevronRight, { size: 14, className: "rotate-180" })), hx("button", { type: "button", "aria-label": `${c.label}往右移`, title: "往右移", disabled: vi < 0 || vi >= visibleCols.length - 1, onClick: () => moveCol(c.id, 1), className: arrowCls }, hx(ChevronRight, { size: 14 })));
+        }), hx("button", { type: "button", onClick: resetColOrder, className: "mt-1 w-full text-center text-[0.85em] text-slate-500 hover:text-indigo-600 py-1.5 rounded-lg hover:bg-slate-50" }, "還原欄位順序")))), /* @__PURE__ */ import_react5.default.createElement("div", { className: segBox, title: "文字大小" }, [["m", "標準", 15], ["l", "大", 19]].map(([k, t, px]) => /* @__PURE__ */ import_react5.default.createElement(
       "button",
       {
         key: k,
@@ -14702,13 +14813,13 @@
         key: c.id,
         type: "button",
         onClick: () => clickSort(c.id),
-        title: "點一下排序",
+        ...colDragProps(c),
         "aria-sort": sort.col === c.id ? sort.dir === "asc" ? "ascending" : "descending" : "none",
         className: `py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap font-medium inline-flex items-center justify-center gap-0.5 hover:bg-slate-200/70 transition-colors ${sort.col === c.id ? "text-indigo-600" : ""}`
       },
       c.label,
       sort.col === c.id && (sort.dir === "asc" ? /* @__PURE__ */ import_react5.default.createElement(ChevronUp, { size: 14 }) : /* @__PURE__ */ import_react5.default.createElement(ChevronDown, { size: 14 }))
-    ) : /* @__PURE__ */ import_react5.default.createElement("span", { key: c.id, className: "py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap" }, c.label))), viewWho === "notice" ? noticeRows.length === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, "目前沒有提醒") : /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-notice-list bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, noticeRows.map((r) => renderWithSubs(r, null))) : (searching ? searchBusy && searchFlat.length === 0 : isLoading && flat.length === 0) ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-20 text-slate-400 font-medium animate-pulse" }, searching ? "搜尋中…" : "Loading...") : total === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, searching ? `找不到符合「${kw}」的工作` : "新增一筆工作，開始記錄") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, overdueRows.length > 0 && /* @__PURE__ */ import_react5.default.createElement("div", { className: "bg-white rounded-xl shadow-soft border border-red-100 overflow-hidden" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-4 py-2.5 bg-red-50 border-b border-red-100 flex items-center gap-2 text-red-600 font-bold" }, /* @__PURE__ */ import_react5.default.createElement(AlertTriangle, { size: ic }), " 逾期未完成 ", /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-[0.8em] bg-white/80 border border-red-100 px-2 rounded-md" }, overdueRows.length)), overdueRows.map((r) => renderWithSubs(r, null))), groups.map((g) => {
+    ) : /* @__PURE__ */ import_react5.default.createElement("span", { key: c.id, className: "py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap", ...colDragProps(c) }, c.label))), viewWho === "notice" ? noticeRows.length === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, "目前沒有提醒") : /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-notice-list bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, noticeRows.map((r) => renderWithSubs(r, null))) : (searching ? searchBusy && searchFlat.length === 0 : isLoading && flat.length === 0) ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-20 text-slate-400 font-medium animate-pulse" }, searching ? "搜尋中…" : "Loading...") : total === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, searching ? `找不到符合「${kw}」的工作` : "新增一筆工作，開始記錄") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, overdueRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-red-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkOverdueOpen", setOverdueOpen), "aria-expanded": overdueOpen, title: overdueOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-red-50 hover:bg-red-100/60 transition-colors ${overdueOpen ? "border-b" : ""} border-red-100 flex items-center gap-2 text-red-600 font-bold` }, overdueOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(AlertTriangle, { size: ic }), " 逾期未完成 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-red-100 px-2 rounded-md" }, overdueRows.length)), overdueOpen && overdueRows.map((r) => renderWithSubs(r, null))), holdRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-amber-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkHoldOpen", setHoldOpen), "aria-expanded": holdOpen, title: holdOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-amber-50 hover:bg-amber-100/60 transition-colors ${holdOpen ? "border-b" : ""} border-amber-100 flex items-center gap-2 text-amber-700 font-bold` }, holdOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(Pause, { size: ic }), " 擱置 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-amber-100 px-2 rounded-md" }, holdRows.length)), holdOpen && holdRows.map((r) => renderWithSubs(r, null))), groups.map((g) => {
       const dl = dateLabel(g.date, today);
       return /* @__PURE__ */ import_react5.default.createElement("div", { key: g.date, className: "bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 flex items-center gap-2" }, /* @__PURE__ */ import_react5.default.createElement("span", { className: `font-bold ${dl.tag === "今天" ? "text-indigo-600" : "text-slate-800"}` }, dl.text)), g.rows.map((r) => renderWithSubs(r, g)));
     }), searching && pages > 1 && /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-pager flex items-center justify-center gap-3 pt-2 text-[0.9em] text-slate-600" }, /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", "aria-label": "上一頁", disabled: page <= 1, onClick: () => setPage(Math.max(1, page - 1)), style: { fontSize: "1.4em" }, className: "tbc-pager-prev w-9 h-9 rounded-full leading-none hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" }, "‹"), /* @__PURE__ */ import_react5.default.createElement(
