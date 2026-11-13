@@ -13239,7 +13239,7 @@
     { id: "doer", label: "執行", sortable: true, w: (fs) => `${Math.ceil(fs * 4 + 22)}px`, min: (fs) => Math.ceil(fs * 4 + 22) },
     { id: "status", label: "狀態", sortable: true, w: (fs) => `${Math.ceil(fs * 0.85 * 4 + 100)}px`, min: (fs) => Math.ceil(fs * 0.85 * 4 + 100) },
     { id: "date", label: "日期", sortable: true, w: (fs, o) => `${dateColW(fs, o)}px`, min: (fs, o) => dateColW(fs, o) },
-    { id: "time", label: "時間", w: "minmax(150px,1fr)", min: 150 },
+    { id: "time", label: "時間", w: (fs) => `${Math.ceil(fs * 7.4 + 28)}px`, min: (fs) => Math.ceil(fs * 7.4 + 28) },
     { id: "hours", label: "工時", sortable: true, w: (fs) => `${Math.ceil(fs * 4.8 + 24)}px`, min: (fs) => Math.ceil(fs * 4.8 + 24) },
     { id: "priority", label: "優先順序", sortable: true, w: (fs) => `${Math.ceil(fs * 0.85 * 4 + 52)}px`, min: (fs) => Math.ceil(fs * 0.85 * 4 + 52) },
     { id: "note", label: "備註", w: "minmax(120px,1.5fr)", min: 120 }
@@ -13324,7 +13324,7 @@
     return m || "發生未知錯誤";
   };
   var ruleSummary = (r) => {
-    if (r.freq === "weekly") return "每週 " + [...r.week_days || []].sort((a, b) => a - b).map((n) => WD[n % 7]).join("、");
+    if (r.freq === "weekly") return "每週 " + [...r.week_days || []].sort((a, b) => a - b).map((n) => WD[n % 7]).join("、") + (r.skip_weeks && r.skip_weeks.length ? "（暫停第" + [...r.skip_weeks].sort((a, b) => a - b).join("、") + "週）" : "");
     const parts = [];
     if (r.month_day) parts.push(`${r.month_day} 號`);
     if (r.month_last_day) parts.push("最後一天");
@@ -13649,7 +13649,10 @@
     };
     const availMax = startTime ? 1439 - toMin(startTime) : endTime ? toMin(endTime) : 1439;
     const durSelValue = durCustomOpen ? "custom" : durMin === null ? "" : DUR_PRESETS.some(([m]) => m === durMin) ? String(durMin) : "custom";
-    const [repeat, setRepeat] = (0, import_react5.useState)(isRuleEdit ? init.freq : mode === "createRule" ? presetRepeat || "weekly" : "none");
+    const [repeat, setRepeat] = (0, import_react5.useState)(isRuleEdit ? init.freq : mode === "createRule" ? "weekly" : "none");
+    const weeklyOnly = mode === "createRule" || isRuleEdit && init.freq === "weekly";
+    const [skipWeeks, setSkipWeeks] = (0, import_react5.useState)(Array.isArray(init.skip_weeks) ? init.skip_weeks : []);
+    const toggleSkip = (n) => setSkipWeeks((w) => w.includes(n) ? w.filter((x) => x !== n) : [...w, n].sort((a, b) => a - b));
     const [weekDays, setWeekDays] = (0, import_react5.useState)(init.week_days || []);
     const [monthDay, setMonthDay] = (0, import_react5.useState)(init.month_day ? String(init.month_day) : "");
     const [monthLast, setMonthLast] = (0, import_react5.useState)(!!init.month_last_day);
@@ -13715,6 +13718,7 @@
         repeat,
         weekdaysOnly: false,
         weekDays: repeat === "weekly" ? weekDays : [],
+        skipWeeks: repeat === "weekly" ? skipWeeks : [],
         monthDay: repeat === "monthly" && monthDay ? Number(monthDay) : null,
         monthLast: repeat === "monthly" && monthLast,
         untilDate: untilDate || null,
@@ -13723,7 +13727,7 @@
         dispatcherId: [...dispatcher][0] || meId
       });
     };
-    return /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "bg-white w-full max-w-2xl max-h-[92dvh] rounded-2xl shadow-hover-soft overflow-hidden flex flex-col animate-fade-in border border-slate-100" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-5 py-4 border-b border-slate-100 flex justify-between items-center shrink-0" }, /* @__PURE__ */ import_react5.default.createElement("h3", { className: "text-lg font-bold text-slate-900 flex items-center gap-2" }, isRuleEdit ? /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement(Repeat, { className: "text-indigo-600", size: 20 }), " 修改週期工作") : mode === "createRule" ? /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement(Repeat, { className: "text-indigo-600", size: 20 }), " 新增週期工作") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement(Plus, { className: "text-indigo-600", size: 20 }), " ", parent ? "新增子工作" : "新增")), /* @__PURE__ */ import_react5.default.createElement("button", { onClick: onClose, className: "p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 20 }))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "p-5 overflow-y-auto custom-scrollbar space-y-5 flex-1" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, parent ? "子工作" : "工作摘要", /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-red-500" }, "*")), /* @__PURE__ */ import_react5.default.createElement("input", { id: "tbc-f-title", autoFocus: true, value: title, onChange: (e) => setTitle(e.target.value), placeholder: "簡短描述工作內容", className: `${inp} ${bad === "tbc-f-title" ? "!border-red-400 ring-2 ring-red-200" : ""}` })), mode === "create" && pickOpts.length > 0 && /* @__PURE__ */ import_react5.default.createElement("div", { className: "grid grid-cols-2 gap-4" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "派工", /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-red-500" }, "*")), /* @__PURE__ */ import_react5.default.createElement(PickMenu, { id: "tbc-f-disp", options: pickOpts, selected: dispatcher, onChange: setDispatcher, bad: bad === "tbc-f-disp" })), /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "執行", /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-red-500" }, "*")), /* @__PURE__ */ import_react5.default.createElement(PickMenu, { id: "tbc-f-doer", options: pickOpts, selected: assignees, multi: true, onChange: setAssignees, bad: bad === "tbc-f-doer" }))), showRepeat && /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "重複"), /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex items-center bg-slate-50 p-1.5 rounded-lg border border-slate-200 w-max" }, [["none", "不重複"], ["weekly", "每週"], ["monthly", "每月"]].filter(([k]) => !((isRuleEdit || mode === "createRule") && k === "none")).map(([k, t]) => /* @__PURE__ */ import_react5.default.createElement(
+    return /* @__PURE__ */ import_react5.default.createElement("div", { className: "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "bg-white w-full max-w-2xl max-h-[92dvh] rounded-2xl shadow-hover-soft overflow-hidden flex flex-col animate-fade-in border border-slate-100" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-5 py-4 border-b border-slate-100 flex justify-between items-center shrink-0" }, /* @__PURE__ */ import_react5.default.createElement("h3", { className: "text-lg font-bold text-slate-900 flex items-center gap-2" }, isRuleEdit ? /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement(Repeat, { className: "text-indigo-600", size: 20 }), " 修改週期工作") : mode === "createRule" ? /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement(Repeat, { className: "text-indigo-600", size: 20 }), " 新增週期工作") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, /* @__PURE__ */ import_react5.default.createElement(Plus, { className: "text-indigo-600", size: 20 }), " ", parent ? "新增子工作" : "新增")), /* @__PURE__ */ import_react5.default.createElement("button", { onClick: onClose, className: "p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors" }, /* @__PURE__ */ import_react5.default.createElement(X, { size: 20 }))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "p-5 overflow-y-auto custom-scrollbar space-y-5 flex-1" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, parent ? "子工作" : "工作摘要", /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-red-500" }, "*")), /* @__PURE__ */ import_react5.default.createElement("input", { id: "tbc-f-title", autoFocus: true, value: title, onChange: (e) => setTitle(e.target.value), placeholder: "簡短描述工作內容", className: `${inp} ${bad === "tbc-f-title" ? "!border-red-400 ring-2 ring-red-200" : ""}` })), mode === "create" && pickOpts.length > 0 && /* @__PURE__ */ import_react5.default.createElement("div", { className: "grid grid-cols-2 gap-4" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "派工", /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-red-500" }, "*")), /* @__PURE__ */ import_react5.default.createElement(PickMenu, { id: "tbc-f-disp", options: pickOpts, selected: dispatcher, onChange: setDispatcher, bad: bad === "tbc-f-disp" })), /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "執行", /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-red-500" }, "*")), /* @__PURE__ */ import_react5.default.createElement(PickMenu, { id: "tbc-f-doer", options: pickOpts, selected: assignees, multi: true, onChange: setAssignees, bad: bad === "tbc-f-doer" }))), showRepeat && /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, weeklyOnly ? "在這幾天重複" : "重複"), !weeklyOnly && /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex items-center bg-slate-50 p-1.5 rounded-lg border border-slate-200 w-max" }, [["none", "不重複"], ["weekly", "每週"], ["monthly", "每月"]].filter(([k]) => !((isRuleEdit || mode === "createRule") && k === "none")).map(([k, t]) => /* @__PURE__ */ import_react5.default.createElement(
       "button",
       {
         key: k,
@@ -13741,7 +13745,7 @@
         className: `w-10 h-10 rounded-full border text-sm font-medium transition-all ${weekDays.includes(n) ? "bg-indigo-600 border-indigo-600 text-white shadow-sm" : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300"}`
       },
       WD[n % 7]
-    ))), repeat === "monthly" && /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex items-center gap-4 pt-1 flex-wrap" }, /* @__PURE__ */ import_react5.default.createElement("select", { id: "tbc-f-month", value: monthDay, onChange: (e) => setMonthDay(e.target.value), className: "bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none text-sm text-slate-900" }, /* @__PURE__ */ import_react5.default.createElement("option", { value: "" }, "不指定"), Array.from({ length: 31 }, (_, i) => i + 1).map((n) => /* @__PURE__ */ import_react5.default.createElement("option", { key: n, value: n }, n, " 日"))), /* @__PURE__ */ import_react5.default.createElement("label", { className: "flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none" }, /* @__PURE__ */ import_react5.default.createElement("input", { type: "checkbox", checked: monthLast, onChange: (e) => setMonthLast(e.target.checked), className: "accent-indigo-600" }), " 每月最後一天"), monthDay && Number(monthDay) > 28 && !monthLast && /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-xs text-amber-600" }," 如果沒有", monthDay, " 日，排程自動略過，建議勾選「每月最後一天」"))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "grid grid-cols-2 gap-4" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "開始日期"), /* @__PURE__ */ import_react5.default.createElement("input", { id: "tbc-f-start", type: "date", value: startDate, onChange: (e) => {
+    ))), repeat === "weekly" && weeklyOnly && /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5 pt-3" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "每月暫停週次"), /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex gap-2 flex-wrap" }, [1, 2, 3, 4, 5].map((n) => /* @__PURE__ */ import_react5.default.createElement("button", { key: n, type: "button", onClick: () => toggleSkip(n), className: `h-8 px-3 rounded-full border text-xs font-medium transition-all ${skipWeeks.includes(n) ? "bg-amber-500 border-amber-500 text-white shadow-sm" : "bg-white border-slate-200 text-slate-600 hover:border-amber-300"}` }, `第${n}週`)))), repeat === "monthly" && /* @__PURE__ */ import_react5.default.createElement("div", { className: "flex items-center gap-4 pt-1 flex-wrap" }, /* @__PURE__ */ import_react5.default.createElement("select", { id: "tbc-f-month", value: monthDay, onChange: (e) => setMonthDay(e.target.value), className: "bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none text-sm text-slate-900" }, /* @__PURE__ */ import_react5.default.createElement("option", { value: "" }, "不指定"), Array.from({ length: 31 }, (_, i) => i + 1).map((n) => /* @__PURE__ */ import_react5.default.createElement("option", { key: n, value: n }, n, " 日"))), /* @__PURE__ */ import_react5.default.createElement("label", { className: "flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none" }, /* @__PURE__ */ import_react5.default.createElement("input", { type: "checkbox", checked: monthLast, onChange: (e) => setMonthLast(e.target.checked), className: "accent-indigo-600" }), " 每月最後一天"), monthDay && Number(monthDay) > 28 && !monthLast && /* @__PURE__ */ import_react5.default.createElement("span", { className: "text-xs text-amber-600" }," 如果沒有", monthDay, " 日，排程自動略過，建議勾選「每月最後一天」"))), /* @__PURE__ */ import_react5.default.createElement("div", { className: "grid grid-cols-2 gap-4" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "開始日期"), /* @__PURE__ */ import_react5.default.createElement("input", { id: "tbc-f-start", type: "date", value: startDate, onChange: (e) => {
       setStartDate(e.target.value);
       if (endDate < e.target.value) setEndDate(e.target.value);
     }, className: `${inp} ${bad === "tbc-f-start" ? "!border-red-400 ring-2 ring-red-200" : ""}` })), /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "開始時間", sameDay ? "（選填）" : "（禁填）"), /* @__PURE__ */ import_react5.default.createElement(TimeInput, { disabled: !sameDay, id: "tbc-f-stime", value: startTime, onChange: onStartChange, className: `${inp} !w-auto min-w-[8rem] ${bad === "tbc-f-stime" ? "!border-red-400 ring-2 ring-red-200" : ""}` })), repeat === "none" ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "結束日期"), /* @__PURE__ */ import_react5.default.createElement("input", { id: "tbc-f-end", type: "date", value: endDate, min: startDate, onChange: (e) => setEndDate(e.target.value), className: `${inp} ${bad === "tbc-f-end" ? "!border-red-400 ring-2 ring-red-200" : ""}` })) : /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "結束日期（選填）"), /* @__PURE__ */ import_react5.default.createElement("input", { id: "tbc-f-until", type: "date", value: untilDate, min: startDate, onChange: (e) => setUntilDate(e.target.value), className: inp })), /* @__PURE__ */ import_react5.default.createElement("div", { className: "space-y-1.5" }, /* @__PURE__ */ import_react5.default.createElement("label", { className: lbl }, "結束時間", sameDay ? "（選填）" : "（禁填）"), (() => {
@@ -13840,6 +13844,43 @@
         return [];
       }
     });
+    const [colWidths, setColWidths] = (0, import_react5.useState)(() => {
+      try {
+        const v = JSON.parse(localStorage.getItem("tbcWorkColWidths") || "{}");
+        return v && typeof v === "object" ? v : {};
+      } catch (e) {
+        return {};
+      }
+    });
+    const saveColWidth = (id, px) => setColWidths((w0) => {
+      const n = { ...w0 };
+      if (px) n[id] = px;
+      else delete n[id];
+      try {
+        localStorage.setItem("tbcWorkColWidths", JSON.stringify(n));
+      } catch (e) {
+      }
+      return n;
+    });
+    const startResize = (e, c) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const th = e.currentTarget.parentElement;
+      const startX = e.clientX;
+      const startW = th.getBoundingClientRect().width;
+      const onMove = (ev) => {
+        const w = Math.max(c.id === "title" ? 120 : 80, Math.round(startW + ev.clientX - startX));
+        setColWidths((w0) => ({ ...w0, [c.id]: w }));
+      };
+      const onUp = (ev) => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        const w = Math.max(c.id === "title" ? 120 : 80, Math.round(startW + ev.clientX - startX));
+        saveColWidth(c.id, w);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    };
     const [colDrag, setColDrag] = (0, import_react5.useState)(null);
     const [colOver, setColOver] = (0, import_react5.useState)(null);
     const readOpen = (k) => {
@@ -14280,8 +14321,8 @@
         title: c.sortable ? "點擊排序・拖曳移動" : "拖曳調整欄位順序"
       };
     };
-    const colW = (c) => typeof c.w === "function" ? c.w(fs, colCtx) : c.w;
-    const colMin = (c) => typeof c.min === "function" ? c.min(fs, colCtx) : c.min;
+    const colW = (c) => colWidths[c.id] && (c.id === "title" || c.id === "note") ? `${colWidths[c.id]}px` : typeof c.w === "function" ? c.w(fs, colCtx) : c.w;
+    const colMin = (c) => colWidths[c.id] && (c.id === "title" || c.id === "note") ? colWidths[c.id] : typeof c.min === "function" ? c.min(fs, colCtx) : c.min;
     const tpl = `56px ${visibleCols.map(colW).join(" ")}`;
     const listMinWidth = 56 + visibleCols.reduce((n, c) => n + colMin(c), 0) + 16;
     const saveItem = (row, patch, okText) => act(() => {
@@ -14416,7 +14457,8 @@
           p_priority: p.priority,
           p_note: p.note,
           p_meeting_flag: null,
-          p_is_active: p.isActive
+          p_is_active: p.isActive,
+          ...p.skipWeeks && p.skipWeeks.length || modal.rule.skip_weeks && modal.rule.skip_weeks.length ? { p_skip_weeks: p.skipWeeks || [] } : {}
         }), "週期工作設定完成");
         if (ok !== void 0) await loadRules();
       } else if (p.repeat === "none" && p.assigneeIds && (modal.parent || !(p.assigneeIds.length === 1 && p.assigneeIds[0] === me && p.dispatcherId === me))) {
@@ -14459,7 +14501,8 @@
           p_end_time: p.endTime,
           p_priority: p.priority,
           p_note: p.note,
-          p_meeting_flag: null
+          p_meeting_flag: null,
+          ...p.skipWeeks && p.skipWeeks.length ? { p_skip_weeks: p.skipWeeks } : {}
         }), "週期工作設定完成，凌晨自動建立");
       }
       setBusy(false);
@@ -14552,7 +14595,8 @@
         p_priority: r.priority,
         p_note: r.note,
         p_meeting_flag: null,
-        p_is_active: !r.is_active
+        p_is_active: !r.is_active,
+        ...r.skip_weeks && r.skip_weeks.length ? { p_skip_weeks: r.skip_weeks } : {}
       }), r.is_active ? "已暫停" : "已啟用");
       if (ok !== void 0) await loadRules();
     };
@@ -14796,11 +14840,12 @@
         onClick: () => clickSort(c.id),
         ...colDragProps(c),
         "aria-sort": sort.col === c.id ? sort.dir === "asc" ? "ascending" : "descending" : "none",
-        className: `py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap font-medium inline-flex items-center justify-center gap-0.5 hover:bg-slate-200/70 transition-colors ${sort.col === c.id ? "text-indigo-600" : ""}`
+        className: `relative py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap font-medium inline-flex items-center justify-center gap-0.5 hover:bg-slate-200/70 transition-colors ${sort.col === c.id ? "text-indigo-600" : ""}`
       },
       c.label,
-      sort.col === c.id && (sort.dir === "asc" ? /* @__PURE__ */ import_react5.default.createElement(ChevronUp, { size: 14 }) : /* @__PURE__ */ import_react5.default.createElement(ChevronDown, { size: 14 }))
-    ) : /* @__PURE__ */ import_react5.default.createElement("span", { key: c.id, className: "py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap", ...colDragProps(c) }, c.label))), viewWho === "notice" ? noticeRows.length === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, "目前沒有提醒") : /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-notice-list bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, noticeRows.map((r) => renderWithSubs(r, null))) : (searching ? searchBusy && searchFlat.length === 0 : isLoading && flat.length === 0) ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-20 text-slate-400 font-medium animate-pulse" }, searching ? "搜尋中…" : "Loading...") : total === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, searching ? `找不到符合「${kw}」的工作` : "新增一筆工作，開始記錄") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, overdueRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-red-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkOverdueOpen", setOverdueOpen), "aria-expanded": overdueOpen, title: overdueOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-red-50 hover:bg-red-100/60 transition-colors ${overdueOpen ? "border-b" : ""} border-red-100 flex items-center gap-2 text-red-600 font-bold` }, overdueOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(AlertTriangle, { size: ic }), " 逾期未完成 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-red-100 px-2 rounded-md" }, overdueRows.length)), overdueOpen && overdueRows.map((r) => renderWithSubs(r, null))), holdRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-amber-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkHoldOpen", setHoldOpen), "aria-expanded": holdOpen, title: holdOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-amber-50 hover:bg-amber-100/60 transition-colors ${holdOpen ? "border-b" : ""} border-amber-100 flex items-center gap-2 text-amber-700 font-bold` }, holdOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(Pause, { size: ic }), " 卡住 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-amber-100 px-2 rounded-md" }, holdRows.length)), holdOpen && holdRows.map((r) => renderWithSubs(r, null))), groups.map((g) => {
+      sort.col === c.id && (sort.dir === "asc" ? /* @__PURE__ */ import_react5.default.createElement(ChevronUp, { size: 14 }) : /* @__PURE__ */ import_react5.default.createElement(ChevronDown, { size: 14 })),
+      (c.id === "title" || c.id === "note") && /* @__PURE__ */ import_react5.default.createElement("span", { role: "separator", "aria-label": "調整欄寬", title: "拖曳調整欄寬（雙擊恢復自動）", draggable: false, onMouseDown: (e) => startResize(e, c), onClick: (e) => e.stopPropagation(), onDoubleClick: (e) => { e.stopPropagation(); saveColWidth(c.id, null); }, className: "absolute top-0 right-0 h-full w-2 cursor-col-resize hover:bg-indigo-300/60" })
+    ) : /* @__PURE__ */ import_react5.default.createElement("span", { key: c.id, className: "relative py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap", ...colDragProps(c) }, c.label, (c.id === "title" || c.id === "note") && /* @__PURE__ */ import_react5.default.createElement("span", { role: "separator", "aria-label": "調整欄寬", title: "拖曳調整欄寬（雙擊恢復自動）", draggable: false, onMouseDown: (e) => startResize(e, c), onClick: (e) => e.stopPropagation(), onDoubleClick: (e) => { e.stopPropagation(); saveColWidth(c.id, null); }, className: "absolute top-0 right-0 h-full w-2 cursor-col-resize hover:bg-indigo-300/60" })))), viewWho === "notice" ? noticeRows.length === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, "目前沒有提醒") : /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-notice-list bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, noticeRows.map((r) => renderWithSubs(r, null))) : (searching ? searchBusy && searchFlat.length === 0 : isLoading && flat.length === 0) ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-20 text-slate-400 font-medium animate-pulse" }, searching ? "搜尋中…" : "Loading...") : total === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, searching ? `找不到符合「${kw}」的工作` : "新增一筆工作，開始記錄") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, overdueRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-red-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkOverdueOpen", setOverdueOpen), "aria-expanded": overdueOpen, title: overdueOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-red-50 hover:bg-red-100/60 transition-colors ${overdueOpen ? "border-b" : ""} border-red-100 flex items-center gap-2 text-red-600 font-bold` }, overdueOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(AlertTriangle, { size: ic }), " 逾期未完成 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-red-100 px-2 rounded-md" }, overdueRows.length)), overdueOpen && overdueRows.map((r) => renderWithSubs(r, null))), holdRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-amber-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkHoldOpen", setHoldOpen), "aria-expanded": holdOpen, title: holdOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-amber-50 hover:bg-amber-100/60 transition-colors ${holdOpen ? "border-b" : ""} border-amber-100 flex items-center gap-2 text-amber-700 font-bold` }, holdOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(Pause, { size: ic }), " 卡住 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-amber-100 px-2 rounded-md" }, holdRows.length)), holdOpen && holdRows.map((r) => renderWithSubs(r, null))), groups.map((g) => {
       const dl = dateLabel(g.date, today);
       return /* @__PURE__ */ import_react5.default.createElement("div", { key: g.date, className: "bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 flex items-center gap-2" }, /* @__PURE__ */ import_react5.default.createElement("span", { className: `font-bold ${dl.tag === "今天" ? "text-indigo-600" : "text-slate-800"}` }, dl.text)), g.rows.map((r) => renderWithSubs(r, g)));
     }), searching && pages > 1 && /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-pager flex items-center justify-center gap-3 pt-2 text-[0.9em] text-slate-600" }, /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", "aria-label": "上一頁", disabled: page <= 1, onClick: () => setPage(Math.max(1, page - 1)), style: { fontSize: "1.4em" }, className: "tbc-pager-prev w-9 h-9 rounded-full leading-none hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" }, "‹"), /* @__PURE__ */ import_react5.default.createElement(
