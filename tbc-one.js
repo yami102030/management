@@ -13694,8 +13694,8 @@
       setErr("");
       setBad("");
       if (!title.trim()) return fail(parent ? "輸入子工作" : "輸入工作摘要", "tbc-f-title");
-      if (mode === "create" && dispatcher.size === 0) return fail("選擇派工人", "tbc-f-disp");
-      if (mode === "create" && assignees.size === 0) return fail("至少選一位執行人", "tbc-f-doer");
+      if (mode === "create" && dispatcher.size === 0) return fail("選擇派工者", "tbc-f-disp");
+      if (mode === "create" && assignees.size === 0) return fail("選擇執行者", "tbc-f-doer");
       if (!startDate) return fail("開始日期必填", "tbc-f-start");
       if (durMin && !startTime && !endTime) return fail("填寫開始時間或結束時間", "tbc-f-stime");
       if (startTime && !endTime || !startTime && endTime) return fail("同時填寫或同時取消", startTime ? "tbc-f-etime" : "tbc-f-stime");
@@ -14277,7 +14277,7 @@
           setColOver(null);
         },
         style: showMark ? { boxShadow: `inset ${vi(colDrag) < vi(c.id) ? "-3px" : "3px"} 0 0 #6366f1`, background: "#e0e7ff" } : void 0,
-        title: c.sortable ? "點一下排序；拖曳可左右移動欄位" : "拖曳可左右移動欄位"
+        title: c.sortable ? "點擊排序・拖曳移動" : "拖曳調整欄位順序"
       };
     };
     const colW = (c) => typeof c.w === "function" ? c.w(fs, colCtx) : c.w;
@@ -14340,10 +14340,10 @@
     };
     const saveDoers = (row, ids) => {
       if (ids.length === 0) {
-        showMessage("error", "請至少選一位執行的人");
+        showMessage("error", "選擇執行者");
         return;
       }
-      return act(() => call("work_set_assignees", { p_item_id: row.item.id, p_member_ids: ids }), row.canManage ? "執行已更新" : "資料更新，通知派工者");
+      return act(() => call("work_set_assignees", { p_item_id: row.item.id, p_member_ids: ids }), row.canManage ? "已更新" : "資料更新，通知派工者");
     };
     const saveTitle = (row, v) => {
       if (!v) {
@@ -14355,7 +14355,7 @@
     const completeRow = (row) => act(() => call("work_complete", { p_item_id: row.item.id, p_note: null }), "已完成");
     const setStatus = (row, st) => act(
       () => call("work_set_status", { p_item_id: row.item.id, p_status: st }),
-      st === "done" && row.item.creator_member_id !== me ? "完成回報，等待派工者確認" : "狀態已更新"
+      st === "done" && row.item.creator_member_id !== me ? "完成回報，等待派工者確認" : "已更新"
     );
     const confirmRow = (row) => act(() => call("work_confirm", { p_assignee_id: row.a.id }), "已完成");
     const [returnInfo, setReturnInfo] = (0, import_react5.useState)(null);
@@ -14375,12 +14375,12 @@
     const deleteRow = (row) => setConfirmAction({
       title: "警告",
       confirmText: "刪除",
-      message: "確定刪除？\n完成或擱置不會刪除，標記「取消」並保留紀錄",
+      message: "確定刪除？\n完成或卡住保留歷史紀錄，不會刪除資料",
       onConfirm: async () => {
         setConfirmAction(null);
         await act(
           () => call("work_delete", { p_item_id: row.item.id }),
-          (r) => r === "canceled" ? "刪除資料，保留原進度紀錄" : "已刪除"
+          (r) => r === "canceled" ? "刪除資料，保留歷史紀錄" : "已刪除"
         );
       }
     });
@@ -14650,7 +14650,7 @@
           case "status": {
             const cur = r.done ? "done" : r.awaiting ? "awaiting" : r.skipped ? "on_hold" : "pending";
             const tone = cur === "done" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : cur === "awaiting" ? "bg-sky-50 border-sky-200 text-sky-700" : cur === "on_hold" ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-slate-100 border-slate-200 text-slate-600";
-            const label = { pending: "待處理", done: "完成", on_hold: "擱置", awaiting: "待確認" }[cur];
+            const label = { pending: "待辦", done: "完成", on_hold: "卡住", awaiting: "待確認" }[cur];
             if (r.awaiting && r.isCreator && !r.isMine) {
               return /* @__PURE__ */ import_react5.default.createElement("div", { key: c.id, className: "flex items-center gap-1.5 tbc-review whitespace-nowrap" }, /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", onClick: () => confirmRow(r), className: "h-8 px-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[0.85em] font-medium transition-colors inline-flex items-center gap-1 whitespace-nowrap shrink-0" }, "確認"), /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", onClick: () => returnRow(r), className: "h-8 px-2.5 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-[0.85em] font-medium transition-colors inline-flex items-center gap-1 whitespace-nowrap shrink-0" }, "退回"));
             }
@@ -14664,9 +14664,9 @@
                 title: "點選項目",
                 className: `h-8 pl-3 pr-2 rounded-full border text-[0.85em] font-medium outline-none cursor-pointer text-center ${tone}`
               },
-              /* @__PURE__ */ import_react5.default.createElement("option", { value: "pending" }, "待處理"),
+              /* @__PURE__ */ import_react5.default.createElement("option", { value: "pending" }, "待辦"),
               /* @__PURE__ */ import_react5.default.createElement("option", { value: "done" }, "完成"),
-              /* @__PURE__ */ import_react5.default.createElement("option", { value: "on_hold" }, "擱置"),
+              /* @__PURE__ */ import_react5.default.createElement("option", { value: "on_hold" }, "卡住"),
               cur === "awaiting" && /* @__PURE__ */ import_react5.default.createElement("option", { value: "awaiting", disabled: true }, "待確認")
             ) : /* @__PURE__ */ import_react5.default.createElement("span", { key: c.id, className: `inline-flex items-center h-8 px-3 rounded-full border text-[0.85em] font-medium ${tone}` }, label);
           }
@@ -14751,7 +14751,7 @@
         onKeyDown: (e) => {
           if (e.key === "Escape") setSearchText("");
         },
-        placeholder: "搜尋：關鍵字",
+        placeholder: "關鍵字",
         "aria-label": "搜尋",
         className: "flex-1 min-w-0 bg-transparent outline-none text-[0.9em] text-slate-900 placeholder:text-slate-400"
       }
@@ -14800,7 +14800,7 @@
       },
       c.label,
       sort.col === c.id && (sort.dir === "asc" ? /* @__PURE__ */ import_react5.default.createElement(ChevronUp, { size: 14 }) : /* @__PURE__ */ import_react5.default.createElement(ChevronDown, { size: 14 }))
-    ) : /* @__PURE__ */ import_react5.default.createElement("span", { key: c.id, className: "py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap", ...colDragProps(c) }, c.label))), viewWho === "notice" ? noticeRows.length === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, "目前沒有提醒") : /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-notice-list bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, noticeRows.map((r) => renderWithSubs(r, null))) : (searching ? searchBusy && searchFlat.length === 0 : isLoading && flat.length === 0) ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-20 text-slate-400 font-medium animate-pulse" }, searching ? "搜尋中…" : "Loading...") : total === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, searching ? `找不到符合「${kw}」的工作` : "新增一筆工作，開始記錄") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, overdueRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-red-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkOverdueOpen", setOverdueOpen), "aria-expanded": overdueOpen, title: overdueOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-red-50 hover:bg-red-100/60 transition-colors ${overdueOpen ? "border-b" : ""} border-red-100 flex items-center gap-2 text-red-600 font-bold` }, overdueOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(AlertTriangle, { size: ic }), " 逾期未完成 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-red-100 px-2 rounded-md" }, overdueRows.length)), overdueOpen && overdueRows.map((r) => renderWithSubs(r, null))), holdRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-amber-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkHoldOpen", setHoldOpen), "aria-expanded": holdOpen, title: holdOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-amber-50 hover:bg-amber-100/60 transition-colors ${holdOpen ? "border-b" : ""} border-amber-100 flex items-center gap-2 text-amber-700 font-bold` }, holdOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(Pause, { size: ic }), " 擱置 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-amber-100 px-2 rounded-md" }, holdRows.length)), holdOpen && holdRows.map((r) => renderWithSubs(r, null))), groups.map((g) => {
+    ) : /* @__PURE__ */ import_react5.default.createElement("span", { key: c.id, className: "py-2 px-2 border-l border-slate-300 text-center whitespace-nowrap", ...colDragProps(c) }, c.label))), viewWho === "notice" ? noticeRows.length === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, "目前沒有提醒") : /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-notice-list bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, noticeRows.map((r) => renderWithSubs(r, null))) : (searching ? searchBusy && searchFlat.length === 0 : isLoading && flat.length === 0) ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-20 text-slate-400 font-medium animate-pulse" }, searching ? "搜尋中…" : "Loading...") : total === 0 ? /* @__PURE__ */ import_react5.default.createElement("div", { className: "text-center py-16 text-slate-400 font-normal bg-white rounded-xl border border-dashed border-slate-200" }, searching ? `找不到符合「${kw}」的工作` : "新增一筆工作，開始記錄") : /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, overdueRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-red-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkOverdueOpen", setOverdueOpen), "aria-expanded": overdueOpen, title: overdueOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-red-50 hover:bg-red-100/60 transition-colors ${overdueOpen ? "border-b" : ""} border-red-100 flex items-center gap-2 text-red-600 font-bold` }, overdueOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(AlertTriangle, { size: ic }), " 逾期未完成 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-red-100 px-2 rounded-md" }, overdueRows.length)), overdueOpen && overdueRows.map((r) => renderWithSubs(r, null))), holdRows.length > 0 && hx("div", { className: "bg-white rounded-xl shadow-soft border border-amber-100 overflow-hidden" }, hx("button", { type: "button", onClick: () => flipOpen("tbcWorkHoldOpen", setHoldOpen), "aria-expanded": holdOpen, title: holdOpen ? "點一下收合" : "點一下展開", className: `w-full text-left px-4 py-2.5 bg-amber-50 hover:bg-amber-100/60 transition-colors ${holdOpen ? "border-b" : ""} border-amber-100 flex items-center gap-2 text-amber-700 font-bold` }, holdOpen ? hx(ChevronUp, { size: ic }) : hx(ChevronDown, { size: ic }), hx(Pause, { size: ic }), " 卡住 ", hx("span", { className: "text-[0.8em] bg-white/80 border border-amber-100 px-2 rounded-md" }, holdRows.length)), holdOpen && holdRows.map((r) => renderWithSubs(r, null))), groups.map((g) => {
       const dl = dateLabel(g.date, today);
       return /* @__PURE__ */ import_react5.default.createElement("div", { key: g.date, className: "bg-white rounded-xl shadow-soft border border-slate-100 overflow-hidden" }, /* @__PURE__ */ import_react5.default.createElement("div", { className: "px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 flex items-center gap-2" }, /* @__PURE__ */ import_react5.default.createElement("span", { className: `font-bold ${dl.tag === "今天" ? "text-indigo-600" : "text-slate-800"}` }, dl.text)), g.rows.map((r) => renderWithSubs(r, g)));
     }), searching && pages > 1 && /* @__PURE__ */ import_react5.default.createElement("div", { className: "tbc-pager flex items-center justify-center gap-3 pt-2 text-[0.9em] text-slate-600" }, /* @__PURE__ */ import_react5.default.createElement("button", { type: "button", "aria-label": "上一頁", disabled: page <= 1, onClick: () => setPage(Math.max(1, page - 1)), style: { fontSize: "1.4em" }, className: "tbc-pager-prev w-9 h-9 rounded-full leading-none hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" }, "‹"), /* @__PURE__ */ import_react5.default.createElement(
