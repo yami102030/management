@@ -12994,7 +12994,7 @@
         { id: "control", label: "功能設定", href: "serve.html#control" }
       ]
     },
-    { id: "venue", label: "場地預約", Icon: CalendarClock, href: "" }
+    { id: "venue", label: "場地預約", Icon: CalendarClock, href: "venue.html", roles: ["pastor", "admin_staff", "admin"] }
   ];
   var givenName = (n) => {
     const v = String(n || "").trim();
@@ -14951,6 +14951,25 @@
     }
     return h("div", { className: "flex h-[100dvh] w-full bg-slate-50 overflow-hidden relative" }, h(Sidebar, { active: "serve", activeChild: route, shell }), h("div", { className: "flex-1 min-w-0 h-full relative overflow-hidden" }, content));
   };
+  var VenuePage = ({ session, supabase: sb, shell }) => {
+    const [ready, setReady] = (0, import_react6.useState)(!!window.TBC_VENUE);
+    (0, import_react6.useEffect)(() => {
+      const onReady = () => setReady(true);
+      window.addEventListener("tbc-venue-ready", onReady);
+      return () => window.removeEventListener("tbc-venue-ready", onReady);
+    }, []);
+    const h = import_react6.default.createElement;
+    const allowed = shell.identity && ALLOWED_ROLES.includes(shell.identity.role);
+    let content;
+    if (!allowed) {
+      content = h("div", { className: "h-full flex items-center justify-center text-slate-500" }, "權限不足");
+    } else if (!ready) {
+      content = h("div", { className: "h-full flex items-center justify-center text-slate-400 animate-pulse" }, "Loading...");
+    } else {
+      content = h(window.TBC_VENUE.Root, { supabase: sb, session, identity: shell.identity });
+    }
+    return h("div", { className: "flex h-[100dvh] w-full bg-slate-50 overflow-hidden relative" }, h(Sidebar, { active: "venue", shell }), h("div", { className: "flex-1 min-w-0 h-full relative overflow-hidden" }, content));
+  };
   var App = ({ page }) => {
     const [session, setSession] = (0, import_react6.useState)(void 0);
     const [denyMsg, setDenyMsg] = (0, import_react6.useState)("");
@@ -15005,6 +15024,7 @@
     if (identity.status !== "ok") return /* @__PURE__ */ import_react6.default.createElement("div", { className: "h-[100dvh] bg-white" });
     const shell = { identity, onLogout };
     if (page === "serve") return /* @__PURE__ */ import_react6.default.createElement(ServePage, { session, supabase, shell });
+    if (page === "venue") return /* @__PURE__ */ import_react6.default.createElement(VenuePage, { session, supabase, shell });
     if (page === "work") return /* @__PURE__ */ import_react6.default.createElement(WorkLog_default, { session, supabase, utils: {}, shell });
     return /* @__PURE__ */ import_react6.default.createElement(Home_default, { shell });
   };
