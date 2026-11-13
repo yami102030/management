@@ -13869,21 +13869,20 @@
       const startX = e.clientX;
       const startW = th.getBoundingClientRect().width;
       const onMove = (ev) => {
-        const w = Math.max(c.id === "title" ? 120 : 80, Math.round(startW + (side === "l" ? startX - ev.clientX : ev.clientX - startX)));
+        const w = Math.max(c.id === "title" ? 120 : 40, Math.round(startW + ev.clientX - startX));
         setColWidths((w0) => ({ ...w0, [c.id]: w }));
       };
       const onUp = (ev) => {
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
-        const w = Math.max(c.id === "title" ? 120 : 80, Math.round(startW + (side === "l" ? startX - ev.clientX : ev.clientX - startX)));
+        const w = Math.max(c.id === "title" ? 120 : 40, Math.round(startW + ev.clientX - startX));
         saveColWidth(c.id, w);
       };
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     };
     const resizeHandles = (c) => {
-      if (c.id !== "title" && c.id !== "note") return null;
-      return ["l", "r"].map((side) => /* @__PURE__ */ import_react5.default.createElement("span", { key: "rz" + side, role: "separator", "aria-label": "調整欄寬", title: "拖曳調整欄寬（雙擊恢復自動）", draggable: false, onMouseDown: (e) => startResize(e, c, side), onClick: (e) => e.stopPropagation(), onDoubleClick: (e) => { e.stopPropagation(); saveColWidth(c.id, null); }, style: { position: "absolute", top: 0, bottom: 0, [side === "l" ? "left" : "right"]: 0, width: 8, cursor: "col-resize", zIndex: 5, background: "transparent", transition: "background 0.12s" }, onMouseEnter: (e) => { e.currentTarget.style.background = "rgba(129,140,248,0.55)"; }, onMouseLeave: (e) => { e.currentTarget.style.background = "transparent"; } }));
+      return [1].map(() => /* @__PURE__ */ import_react5.default.createElement("span", { key: "rz", role: "separator", "aria-label": "調整欄寬", title: "拖曳調整欄寬（雙擊恢復自動）", draggable: false, onMouseDown: (e) => startResize(e, c, "r"), onClick: (e) => e.stopPropagation(), onDoubleClick: (e) => { e.stopPropagation(); saveColWidth(c.id, null); }, style: { position: "absolute", top: 0, bottom: 0, right: 0, width: 8, cursor: "col-resize", zIndex: 5, background: "transparent", transition: "background 0.12s" }, onMouseEnter: (e) => { e.currentTarget.style.background = "rgba(129,140,248,0.55)"; }, onMouseLeave: (e) => { e.currentTarget.style.background = "transparent"; } }));
     };
     const [colDrag, setColDrag] = (0, import_react5.useState)(null);
     const [colOver, setColOver] = (0, import_react5.useState)(null);
@@ -14325,8 +14324,8 @@
         title: c.sortable ? "點擊排序・拖曳移動" : "拖曳調整欄位順序"
       };
     };
-    const colW = (c) => colWidths[c.id] && (c.id === "title" || c.id === "note") ? `${colWidths[c.id]}px` : typeof c.w === "function" ? c.w(fs, colCtx) : c.w;
-    const colMin = (c) => colWidths[c.id] && (c.id === "title" || c.id === "note") ? colWidths[c.id] : typeof c.min === "function" ? c.min(fs, colCtx) : c.min;
+    const colW = (c) => colWidths[c.id] ? `${colWidths[c.id]}px` : typeof c.w === "function" ? c.w(fs, colCtx) : c.w;
+    const colMin = (c) => colWidths[c.id] ? colWidths[c.id] : typeof c.min === "function" ? c.min(fs, colCtx) : c.min;
     const tpl = `56px ${visibleCols.map(colW).join(" ")}`;
     const listMinWidth = 56 + visibleCols.reduce((n, c) => n + colMin(c), 0) + 16;
     const saveItem = (row, patch, okText) => act(() => {
