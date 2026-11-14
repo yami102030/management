@@ -12994,7 +12994,19 @@
         { id: "control", label: "功能設定", href: "serve.html#control" }
       ]
     },
-    { id: "venue", label: "場地預約", Icon: CalendarClock, href: "venue.html", roles: ["pastor", "admin_staff", "admin"] }
+    {
+      id: "venue",
+      label: "場地預約",
+      Icon: CalendarClock,
+      href: "venue.html",
+      roles: ["pastor", "admin_staff", "admin"],
+      children: [
+        { id: "calendar", label: "日曆", href: "venue.html#calendar" },
+        { id: "review", label: "審核", href: "venue.html#review" },
+        { id: "rules", label: "定期預約", href: "venue.html#rules" },
+        { id: "spaces", label: "場地設定", href: "venue.html#spaces" }
+      ]
+    }
   ];
   var givenName = (n) => {
     const v = String(n || "").trim();
@@ -13022,7 +13034,7 @@
       return { status: "denied", name: fallbackName, role: "member", memberId: null };
     }
   };
-  var Sidebar = ({ active, activeChild, shell }) => {
+  var Sidebar = ({ active, activeChild, badges, shell }) => {
     const [collapsed, setCollapsed] = (0, import_react3.useState)(() => {
       try {
         return localStorage.getItem("tbcSidebarCollapsed") === "1";
@@ -13044,16 +13056,16 @@
     const id = shell.identity || { name: "", role: "member", status: "loading" };
     const RoleIcon = ROLE_ICONS[id.role] || User;
     const high = HIGH_ROLES.includes(id.role);
-    const [groupOpen, setGroupOpen] = (0, import_react3.useState)(active === "serve");
+    const [groupOpen, setGroupOpen] = (0, import_react3.useState)(() => ({ [active]: true }));
     const renderGroup = (en) => {
       const on = active === en.id;
-      const open = groupOpen && !collapsed;
+      const open = !!groupOpen[en.id] && !collapsed;
       const cls = `tbc-sb-item flex items-center ${collapsed ? "justify-center w-12 h-12 mx-auto" : "gap-3 px-4 h-11 w-full"} rounded-full text-[15px] transition-colors ${on ? "text-indigo-600 font-semibold" : "text-slate-600 hover:bg-slate-100"}`;
       const onClick = () => {
         if (collapsed) {
           toggle();
-          setGroupOpen(true);
-        } else setGroupOpen((v) => !v);
+          setGroupOpen((g) => ({ ...g, [en.id]: true }));
+        } else setGroupOpen((g) => ({ ...g, [en.id]: !g[en.id] }));
       };
       const chevron = import_react3.default.createElement("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", style: { marginLeft: "auto", transition: "transform .15s", transform: open ? "rotate(180deg)" : "none" } }, import_react3.default.createElement("path", { d: "m6 9 6 6 6-6" }));
       return import_react3.default.createElement(
@@ -13062,7 +13074,7 @@
         import_react3.default.createElement("button", { type: "button", onClick, title: en.label, "aria-expanded": open, className: cls }, import_react3.default.createElement(en.Icon, { size: 20, strokeWidth: 1.75, className: "shrink-0" }), !collapsed && import_react3.default.createElement(import_react3.default.Fragment, null, import_react3.default.createElement("span", { className: "tbc-sb-label whitespace-nowrap" }, en.label), chevron)),
         open && en.children.map((ch) => {
           const childOn = on && activeChild === ch.id;
-          return import_react3.default.createElement("a", { key: ch.id, href: ch.href, "aria-current": childOn ? "page" : void 0, style: { height: 40, fontSize: 14, paddingLeft: 48, paddingRight: 16 }, className: `tbc-sb-item flex items-center w-full rounded-full whitespace-nowrap transition-colors ${childOn ? "bg-indigo-50 text-indigo-600 font-semibold" : "text-slate-600 hover:bg-slate-100"}` }, ch.label);
+          return import_react3.default.createElement("a", { key: ch.id, href: ch.href, "aria-current": childOn ? "page" : void 0, style: { height: 40, fontSize: 14, paddingLeft: 48, paddingRight: 16 }, className: `tbc-sb-item flex items-center w-full rounded-full whitespace-nowrap transition-colors ${childOn ? "bg-indigo-50 text-indigo-600 font-semibold" : "text-slate-600 hover:bg-slate-100"}` }, ch.label, badges && badges[ch.id] && badges[ch.id].n > 0 ? import_react3.default.createElement("span", { "aria-label": `${badges[ch.id].n} 件待審核`, style: { marginLeft: "auto", minWidth: 20, height: 20, padding: "0 6px", borderRadius: 9999, fontSize: 12, fontWeight: 600, color: "#fff", background: badges[ch.id].red ? "#dc2626" : "#4f46e5", display: "inline-flex", alignItems: "center", justifyContent: "center" } }, badges[ch.id].n) : null);
         })
       );
     };
@@ -14951,12 +14963,27 @@
     }
     return h("div", { className: "flex h-[100dvh] w-full bg-slate-50 overflow-hidden relative" }, h(Sidebar, { active: "serve", activeChild: route, shell }), h("div", { className: "flex-1 min-w-0 h-full relative overflow-hidden" }, content));
   };
+  var VENUE_ROUTES = ["calendar", "review", "rules", "spaces"];
+  var readVenueRoute = () => {
+    const r = (window.location.hash || "").replace("#", "");
+    return VENUE_ROUTES.includes(r) ? r : "calendar";
+  };
   var VenuePage = ({ session, supabase: sb, shell }) => {
     const [ready, setReady] = (0, import_react6.useState)(!!window.TBC_VENUE);
+    const [route, setRoute] = (0, import_react6.useState)(readVenueRoute);
+    const [badge, setBadge] = (0, import_react6.useState)(null);
     (0, import_react6.useEffect)(() => {
       const onReady = () => setReady(true);
+      const onHash = () => setRoute(readVenueRoute());
+      const onBadge = (e) => setBadge(e.detail || null);
       window.addEventListener("tbc-venue-ready", onReady);
-      return () => window.removeEventListener("tbc-venue-ready", onReady);
+      window.addEventListener("hashchange", onHash);
+      window.addEventListener("tbc-venue-badge", onBadge);
+      return () => {
+        window.removeEventListener("tbc-venue-ready", onReady);
+        window.removeEventListener("hashchange", onHash);
+        window.removeEventListener("tbc-venue-badge", onBadge);
+      };
     }, []);
     const h = import_react6.default.createElement;
     const allowed = shell.identity && ALLOWED_ROLES.includes(shell.identity.role);
@@ -14968,7 +14995,7 @@
     } else {
       content = h(window.TBC_VENUE.Root, { supabase: sb, session, identity: shell.identity });
     }
-    return h("div", { className: "flex h-[100dvh] w-full bg-slate-50 overflow-hidden relative" }, h(Sidebar, { active: "venue", shell }), h("div", { className: "flex-1 min-w-0 h-full relative overflow-hidden" }, content));
+    return h("div", { className: "flex h-[100dvh] w-full bg-slate-50 overflow-hidden relative" }, h(Sidebar, { active: "venue", activeChild: route, badges: { review: badge }, shell }), h("div", { className: "flex-1 min-w-0 h-full relative overflow-hidden" }, content));
   };
   var readCachedSession = () => {
     try {
