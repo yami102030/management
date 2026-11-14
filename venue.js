@@ -185,7 +185,6 @@
         p_contact_name: f.contact_name || null,
         p_contact_phone: f.contact_phone || null,
         p_note: f.note || null,
-        p_visibility: f.visibility || "public",
         p_skip_conflicts: !!f.skip_conflicts
       }),
       // 核准或退回（一次最多 100 筆，超過自動分批）
@@ -224,7 +223,6 @@
         p_contact_name: r.contact_name || null,
         p_contact_phone: r.contact_phone || null,
         p_note: r.note || null,
-        p_visibility: r.visibility || "public",
         p_is_active: r.is_active !== false
       }),
       deleteRule: (id) => call("venue_delete_rule", { p_rule_id: id })

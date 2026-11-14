@@ -14914,7 +14914,7 @@
   var SUPABASE_KEY = window.TBC_CONFIG.SUPABASE_KEY;
   var style = document.createElement("style");
   style.id = "tbc-one-css";
-  style.textContent = generated_css_default;
+  style.textContent = generated_css_default + "\nhtml,body{background:#f8fafc}@keyframes tbcFadeIn{from{opacity:0}to{opacity:1}}#root>*{animation:tbcFadeIn .18s ease-out}@media (prefers-reduced-motion:reduce){#root>*{animation:none}}";
   document.head.appendChild(style);
   var supabase = window.__TBC_SB || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   window.__TBC = { React: import_react6.default, supabase };
@@ -14970,10 +14970,45 @@
     }
     return h("div", { className: "flex h-[100dvh] w-full bg-slate-50 overflow-hidden relative" }, h(Sidebar, { active: "venue", shell }), h("div", { className: "flex-1 min-w-0 h-full relative overflow-hidden" }, content));
   };
+  var readCachedSession = () => {
+    try {
+      let k = supabase.auth && supabase.auth.storageKey;
+      if (!k) {
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const kk = window.localStorage.key(i);
+          if (/^sb-.*-auth-token$/.test(kk)) {
+            k = kk;
+            break;
+          }
+        }
+      }
+      if (!k) return void 0;
+      const raw = window.localStorage.getItem(k);
+      if (!raw) return void 0;
+      const s = JSON.parse(raw);
+      if (!s || !s.access_token || !s.user) return void 0;
+      if (s.expires_at && s.expires_at * 1e3 < Date.now() + 3e4) return void 0;
+      return s;
+    } catch (e) {
+      return void 0;
+    }
+  };
+  var IDENTITY_CACHE_KEY = "tbc_identity_v1";
+  var readCachedIdentity = (uid) => {
+    try {
+      const c = JSON.parse(window.sessionStorage.getItem(IDENTITY_CACHE_KEY) || "null");
+      if (c && uid && c.uid === uid && c.identity && c.identity.status === "ok") return c.identity;
+    } catch (e) {
+    }
+    return null;
+  };
   var App = ({ page }) => {
-    const [session, setSession] = (0, import_react6.useState)(void 0);
+    const [session, setSession] = (0, import_react6.useState)(() => readCachedSession());
     const [denyMsg, setDenyMsg] = (0, import_react6.useState)("");
-    const [identity, setIdentity] = (0, import_react6.useState)({ status: "loading", name: "", role: "member" });
+    const [identity, setIdentity] = (0, import_react6.useState)(() => {
+      const s0 = readCachedSession();
+      return readCachedIdentity(s0 && s0.user && s0.user.id) || { status: "loading", name: "", role: "member" };
+    });
     (0, import_react6.useEffect)(() => {
       let alive = true;
       supabase.auth.getSession().then(({ data }) => {
@@ -15003,7 +15038,11 @@
           return;
         }
         setDenyMsg("");
-        setIdentity(i);
+        try {
+          window.sessionStorage.setItem(IDENTITY_CACHE_KEY, JSON.stringify({ uid, identity: i }));
+        } catch (e) {
+        }
+        setIdentity((prev) => JSON.stringify(prev) === JSON.stringify(i) ? prev : i);
       });
       return () => {
         alive = false;
@@ -15015,13 +15054,17 @@
       } catch (e) {
       }
       setSession(null);
+      try {
+        window.sessionStorage.removeItem(IDENTITY_CACHE_KEY);
+      } catch (e) {
+      }
       setIdentity({ status: "loading", name: "", role: "member" });
     };
-    if (session === void 0) return /* @__PURE__ */ import_react6.default.createElement("div", { className: "h-[100dvh] bg-white" });
+    if (session === void 0) return /* @__PURE__ */ import_react6.default.createElement("div", { className: "h-[100dvh] bg-slate-50" });
     if (!session) {
       return /* @__PURE__ */ import_react6.default.createElement("div", { className: "min-h-[100dvh] bg-white flex flex-col items-center justify-center px-6" }, /* @__PURE__ */ import_react6.default.createElement("div", { className: "w-14 h-14 rounded-full border-2 border-[#7e00c8] text-[#7e00c8] flex items-center justify-center mb-5" }, /* @__PURE__ */ import_react6.default.createElement(Aperture, { size: 30 })), /* @__PURE__ */ import_react6.default.createElement("h1", { className: "text-4xl font-semibold text-slate-900" }, "TBC ONE"), /* @__PURE__ */ import_react6.default.createElement("p", { className: "mt-3 mb-10 text-slate-500" }, "One God. One Church. One Mission."), /* @__PURE__ */ import_react6.default.createElement(LoginCard, { supabase, notice: denyMsg }));
     }
-    if (identity.status !== "ok") return /* @__PURE__ */ import_react6.default.createElement("div", { className: "h-[100dvh] bg-white" });
+    if (identity.status !== "ok") return /* @__PURE__ */ import_react6.default.createElement("div", { className: "h-[100dvh] bg-slate-50" });
     const shell = { identity, onLogout };
     if (page === "serve") return /* @__PURE__ */ import_react6.default.createElement(ServePage, { session, supabase, shell });
     if (page === "venue") return /* @__PURE__ */ import_react6.default.createElement(VenuePage, { session, supabase, shell });
@@ -15029,7 +15072,21 @@
     return /* @__PURE__ */ import_react6.default.createElement(Home_default, { shell });
   };
   var el = document.getElementById("root");
-  (0, import_client.createRoot)(el).render(/* @__PURE__ */ import_react6.default.createElement(App, { page: el.getAttribute("data-page") || "home" }));
+  var mountApp = () => {
+    (0, import_client.createRoot)(el).render(/* @__PURE__ */ import_react6.default.createElement(App, { page: el.getAttribute("data-page") || "home" }));
+    const prefetch = () => {
+      ["work.html", "serve.html", "venue.html", "serve.js", "venue.js"].forEach((u) => {
+        const l = document.createElement("link");
+        l.rel = "prefetch";
+        l.href = "./" + u;
+        document.head.appendChild(l);
+      });
+    };
+    if (window.requestIdleCallback) window.requestIdleCallback(prefetch, { timeout: 3e3 });
+    else setTimeout(prefetch, 1500);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountApp);
+  else mountApp();
 })();
 /*! Bundled license information:
 
