@@ -831,7 +831,7 @@ ${fullLabel(dialog.r.booking_date)} ${hm(dialog.r.start_time)}\u2013${hm(dialog.
         message: "",
         onConfirm: async () => {
           await api.deleteBooking(dialog.r.id);
-          notify("\u5DF2\u522A\u9664\uFF0C\u6642\u6BB5\u5DF2\u91CB\u51FA");
+          notify("\u5DF2\u522A\u9664");
           onChanged();
         },
         onClose: () => setDialog(null)
@@ -1019,7 +1019,7 @@ ${fullLabel(dialog.r.booking_date)} ${hm(dialog.r.start_time)}\u2013${hm(dialog.
     const toggleActive = async (r, on) => {
       try {
         await api.saveRule({ ...fromRow(r), is_active: on });
-        notify(on ? "\u5DF2\u555F\u7528\uFF0C\u5DF2\u6392\u9032\u672A\u4F86\u7684\u65E5\u66C6" : "\u5DF2\u505C\u7528\uFF0C\u672A\u4F86\u7531\u5B83\u6392\u7684\u9810\u7D04\u5DF2\u79FB\u9664");
+        notify(on ? "\u5DF2\u555F\u7528\u30FB\u9810\u7D04\u5DF2\u5EFA\u7ACB" : "\u5DF2\u505C\u7528\uFF0C\u9810\u7D04\u5DF2\u79FB\u9664");
         reload();
       } catch (e) {
         notify(e.message, "err");
