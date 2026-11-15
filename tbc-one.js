@@ -13001,8 +13001,8 @@
       href: "venue.html",
       roles: ["pastor", "admin_staff", "admin"],
       children: [
-        { id: "calendar", label: "日曆", href: "venue.html#calendar" },
-        { id: "review", label: "審查", href: "venue.html#review" },
+        { id: "calendar", label: "場地預覽", href: "venue.html#calendar" },
+        { id: "review", label: "審查預約", href: "venue.html#review" },
         { id: "rules", label: "定期預約", href: "venue.html#rules" },
         { id: "spaces", label: "場地設定", href: "venue.html#spaces" }
       ]
