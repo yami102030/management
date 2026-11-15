@@ -13002,7 +13002,7 @@
       roles: ["pastor", "admin_staff", "admin"],
       children: [
         { id: "calendar", label: "日曆", href: "venue.html#calendar" },
-        { id: "review", label: "審核", href: "venue.html#review" },
+        { id: "review", label: "審查", href: "venue.html#review" },
         { id: "rules", label: "定期預約", href: "venue.html#rules" },
         { id: "spaces", label: "場地設定", href: "venue.html#spaces" }
       ]
@@ -13074,7 +13074,7 @@
         import_react3.default.createElement("button", { type: "button", onClick, title: en.label, "aria-expanded": open, className: cls }, import_react3.default.createElement(en.Icon, { size: 20, strokeWidth: 1.75, className: "shrink-0" }), !collapsed && import_react3.default.createElement(import_react3.default.Fragment, null, import_react3.default.createElement("span", { className: "tbc-sb-label whitespace-nowrap" }, en.label), chevron)),
         open && en.children.map((ch) => {
           const childOn = on && activeChild === ch.id;
-          return import_react3.default.createElement("a", { key: ch.id, href: ch.href, "aria-current": childOn ? "page" : void 0, style: { height: 40, fontSize: 14, paddingLeft: 48, paddingRight: 16 }, className: `tbc-sb-item flex items-center w-full rounded-full whitespace-nowrap transition-colors ${childOn ? "bg-indigo-50 text-indigo-600 font-semibold" : "text-slate-600 hover:bg-slate-100"}` }, ch.label, badges && badges[ch.id] && badges[ch.id].n > 0 ? import_react3.default.createElement("span", { "aria-label": `${badges[ch.id].n} 件待審核`, style: { marginLeft: "auto", minWidth: 20, height: 20, padding: "0 6px", borderRadius: 9999, fontSize: 12, fontWeight: 600, color: "#fff", background: badges[ch.id].red ? "#dc2626" : "#4f46e5", display: "inline-flex", alignItems: "center", justifyContent: "center" } }, badges[ch.id].n) : null);
+          return import_react3.default.createElement("a", { key: ch.id, href: ch.href, "aria-current": childOn ? "page" : void 0, style: { height: 40, fontSize: 14, paddingLeft: 48, paddingRight: 16 }, className: `tbc-sb-item flex items-center w-full rounded-full whitespace-nowrap transition-colors ${childOn ? "bg-indigo-50 text-indigo-600 font-semibold" : "text-slate-600 hover:bg-slate-100"}` }, ch.label, badges && badges[ch.id] && badges[ch.id].n > 0 ? import_react3.default.createElement("span", { "aria-label": `${badges[ch.id].n} 件待審查`, style: { marginLeft: "auto", minWidth: 20, height: 20, padding: "0 6px", borderRadius: 9999, fontSize: 12, fontWeight: 600, color: "#fff", background: badges[ch.id].red ? "#dc2626" : "#4f46e5", display: "inline-flex", alignItems: "center", justifyContent: "center" } }, badges[ch.id].n) : null);
         })
       );
     };
