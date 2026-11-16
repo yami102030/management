@@ -14953,6 +14953,7 @@
     btn: { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 14, cursor: "pointer", color: "#334155" },
     btnOn: { border: "1px solid #4f46e5", background: "#4f46e5", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 14, cursor: "pointer" },
     input: { border: "1px solid #cbd5e1", borderRadius: 8, padding: "6px 10px", fontSize: 14, minWidth: 0 },
+    arrow: { border: "none", background: "transparent", padding: "4px 6px", fontSize: 16, cursor: "pointer", color: "#334155" },
     muted: { color: "#64748b", fontSize: 13 }
   };
   var useAccessData = (sb) => {
@@ -15039,7 +15040,7 @@
     };
     return h("div", { style: { maxWidth: 720, margin: "0 auto", padding: "32px 20px" } },
       h("h1", { style: { fontSize: 24, fontWeight: 700, margin: 0 } }, "角色權限"),
-      h("p", { style: { ...AX.muted, margin: "6px 0 16px" } }, "由上往下，越下面權限等級越高；一個人有多個身分時，畫面顯示最高的那個。「會友」與「管理員」不能停用或刪除。"),
+      h("p", { style: { ...AX.muted, margin: "6px 0 16px" } }, "「會友」與「管理員」不能停用或刪除"),
       d.error && h("p", { style: { color: "#dc2626" } }, "讀取失敗：" + d.error),
       msg && h("p", { style: { color: "#dc2626" } }, msg),
       h("div", { style: AX.card },
@@ -15048,10 +15049,10 @@
           const canMove = !sys;
           const editing = edit[r.key] !== undefined;
           return h("div", { key: r.key, style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "10px 0", borderTop: idx ? "1px solid #f1f5f9" : "none", opacity: r.enabled ? 1 : 0.5 } },
-            h("div", { style: { display: "flex", gap: 4, width: 76, flexShrink: 0 } },
+            h("div", { style: { display: "flex", gap: 2, width: 56, flexShrink: 0, marginRight: 8 } },
               canMove && h(import_react6.default.Fragment, null,
-                h("button", { style: AX.btn, title: "往上（權限較低）", disabled: idx <= 1, onClick: () => move(r.key, -1) }, "↑"),
-                h("button", { style: AX.btn, title: "往下（權限較高）", disabled: idx >= movable.length - 1, onClick: () => move(r.key, 1) }, "↓"))),
+                h("button", { style: AX.arrow, title: "往上（權限較低）", disabled: idx <= 1, onClick: () => move(r.key, -1) }, "↑"),
+                h("button", { style: AX.arrow, title: "往下（權限較高）", disabled: idx >= movable.length - 1, onClick: () => move(r.key, 1) }, "↓"))),
             h("div", { style: { flex: 1, minWidth: 120 } },
               editing
                 ? h("input", { style: AX.input, value: edit[r.key], onChange: (e) => setEdit({ ...edit, [r.key]: e.target.value }) })
@@ -15067,11 +15068,17 @@
                   !sys && !(d.counts[r.key] > 0) && h("button", { style: { ...AX.btn, color: "#dc2626" }, onClick: () => remove(r) }, "刪除")));
         })),
       h("div", { style: AX.card },
-        h("div", { style: { fontWeight: 600, marginBottom: 10 } }, "新增身分"),
         h("div", { style: { display: "flex", gap: 8 } },
-          h("input", { style: { ...AX.input, flex: 1 }, placeholder: "身分名稱，例如：小組長", value: newName, onChange: (e) => setNewName(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") add(); } }),
-          h("button", { style: AX.btnOn, onClick: add }, "新增")),
-        h("p", { style: { ...AX.muted, margin: "10px 0 0" } }, "新增後，到「模組管理」勾選這個身分能用哪些功能。")));
+          h("input", { style: { ...AX.input, flex: 1 }, placeholder: "例如：區長", value: newName, onChange: (e) => setNewName(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") add(); } }),
+          h("button", { style: AX.btnOn, onClick: add }, "+新增"))));
+  };
+  var AxCheck = ({ on, onClick }) => {
+    const h = import_react6.default.createElement;
+    const draw = { transition: "stroke-dashoffset 0.6s ease-in", stroke: "#8c00ff", strokeWidth: 5, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
+    return h("button", { type: "button", role: "checkbox", "aria-checked": !!on, onClick, style: { border: "none", background: "transparent", padding: 0, cursor: "pointer", display: "inline-flex", verticalAlign: "middle" } },
+      h("svg", { width: 18, height: 18, viewBox: "0 0 64 64", style: { display: "block" } },
+        h("path", { d: "M 8 2 H 56 A 6 6 0 0 1 62 8 V 56 A 6 6 0 0 1 56 62 H 8 A 6 6 0 0 1 2 56 V 8 A 6 6 0 0 1 8 2 Z", style: { ...draw, fill: "rgba(207,205,205,0.425)", strokeDasharray: 800, strokeDashoffset: on ? 0 : 800 } }),
+        h("path", { d: "M 14 34 L 27 47 L 50 18", style: { ...draw, strokeDasharray: 172, strokeDashoffset: on ? 0 : 172 } })));
   };
   var ModulesView = ({ sb }) => {
     const h = import_react6.default.createElement;
@@ -15085,7 +15092,7 @@
         reload();
       } catch (e) { setMsg("操作失敗：" + (e.message || e)); }
     };
-    const cols = d.roles.filter((r) => r.enabled);
+    const cols = d.roles.filter((r) => r.enabled && r.key !== "admin");
     const toggle = (f, r) => {
       if (r.key === "admin") return;
       const on = !!d.fr[f.key + "|" + r.key];
@@ -15112,10 +15119,9 @@
                 h("td", { style: { padding: "8px", minWidth: 150 } }, f.name,
                   null),
                 cols.map((r) => {
-                  const admin = r.key === "admin";
-                  const on = admin || !!d.fr[f.key + "|" + r.key];
+                  const on = !!d.fr[f.key + "|" + r.key];
                   return h("td", { key: r.key, style: { textAlign: "center", padding: "4px" } },
-                    h("button", { type: "button", onClick: () => toggle(f, r), disabled: admin, title: admin ? "管理員固定全開" : "", style: { width: 28, height: 28, borderRadius: 7, padding: 0, position: "relative", border: on ? "2px solid #2196F3" : "2px solid #1e293b", background: on ? "#2196F3" : "transparent", cursor: admin ? "not-allowed" : "pointer", opacity: admin ? 0.55 : 1, transition: "all .25s" } }, on && h("span", { style: { position: "absolute", left: 8, top: 3, width: 7, height: 13, border: "solid #fff", borderWidth: "0 3px 3px 0", transform: "rotate(45deg)" } }))); 
+                    h(AxCheck, { on, onClick: () => toggle(f, r) }));
                 })))))));
       }));
   };
