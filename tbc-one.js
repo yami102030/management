@@ -12980,13 +12980,13 @@
   var ROLE_ICONS = { member: User, coworker: UserCheck, admin_staff: FolderOpen, leader: Star, pastor: GraduationCap, admin: ShieldCheck };
   var HIGH_ROLES = ["leader", "pastor", "admin"];
   var ENTRIES = [
-    { id: "work", label: "工作日誌", Icon: ListChecks, href: "work.html", roles: ["pastor", "admin_staff", "admin"] },
+    { id: "work", label: "工作日誌", Icon: ListChecks, href: "work.html", feature: "work.log" },
     {
       id: "serve",
       label: "服事管理",
       Icon: Users,
       href: "serve.html",
-      roles: ["admin"],
+      feature: "service.settings",
       children: [
         { id: "members", label: "同工資料中心", href: "serve.html#members" },
         { id: "scheduling", label: "排班作業中心", href: "serve.html#scheduling" },
@@ -12999,7 +12999,7 @@
       label: "場地預約",
       Icon: CalendarClock,
       href: "venue.html",
-      roles: ["pastor", "admin_staff", "admin"],
+      feature: "venue.manage",
       children: [
         { id: "calendar", label: "場地預覽", href: "venue.html#calendar" },
         { id: "review", label: "審查預約", href: "venue.html#review" },
@@ -13014,8 +13014,10 @@
     if (v.length === 4) return v.slice(2);
     return v.length >= 2 && v.length <= 3 ? v.slice(1) : v;
   };
-  var ALLOWED_ROLES = ["pastor", "admin_staff", "admin"];
-  var canUse = (entry, role) => !entry.roles || entry.roles.includes(role);
+  var TBC_ONE_FEATURES = ["work.log", "venue.manage", "service.settings"];
+  var hasFeature = (id, key) => !!id && (id.role === "admin" || Array.isArray(id.features) && id.features.includes(key));
+  var hasAnyOneFeature = (id) => TBC_ONE_FEATURES.some((k) => hasFeature(id, k));
+  var canUse = (entry, id) => !entry.feature || hasFeature(id, entry.feature);
   var toLoginEmail = (account) => {
     const v = String(account || "").trim().toLowerCase();
     return v.includes("@") ? v : `${v}@tbc.gmail.com`;
@@ -13025,13 +13027,13 @@
     try {
       const a = await supabase2.rpc("work_current_member");
       if (a.error) throw a.error;
-      const b = await supabase2.rpc("work_list_people");
+      const b = await supabase2.rpc("my_access");
       if (b.error) throw b.error;
-      const mine = (b.data || []).find((p) => p.member_id === a.data);
-      if (!mine) throw new Error("not in list");
-      return { status: "ok", name: mine.name, role: mine.role, memberId: mine.member_id };
+      const acc = b.data || {};
+      if (!a.data || !acc.name) throw new Error("not in list");
+      return { status: "ok", name: acc.name, role: acc.top_role || "member", roles: acc.roles || [], features: acc.features || [], memberId: a.data };
     } catch (e) {
-      return { status: "denied", name: fallbackName, role: "member", memberId: null };
+      return { status: "denied", name: fallbackName, role: "member", roles: [], features: [], memberId: null };
     }
   };
   var Sidebar = ({ active, activeChild, badges, shell }) => {
@@ -13100,7 +13102,7 @@
         },
         /* @__PURE__ */ import_react3.default.createElement("span", { className: `absolute inset-0 rounded-full border-2 border-[#7e00c8] text-[#7e00c8] flex items-center justify-center ${collapsed ? "group-hover:opacity-0" : ""} transition-opacity` }, /* @__PURE__ */ import_react3.default.createElement(Aperture, { size: 20, strokeWidth: 2 })),
         collapsed && /* @__PURE__ */ import_react3.default.createElement("span", { className: "absolute inset-0 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" }, /* @__PURE__ */ import_react3.default.createElement(PanelLeft, { size: 18 }))
-      ), !collapsed && /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("a", { href: "index.html", className: "tbc-sb-title flex-1 text-[17px] font-semibold text-slate-900 hover:text-indigo-600 transition-colors" }, "TBC ONE"), /* @__PURE__ */ import_react3.default.createElement("button", { onClick: toggle, title: "隱藏側邊欄", "aria-label": "隱藏側邊欄", className: "tbc-sb-toggle w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" }, /* @__PURE__ */ import_react3.default.createElement(PanelLeft, { size: 18 })))), /* @__PURE__ */ import_react3.default.createElement("nav", { className: `flex flex-col gap-1 ${collapsed ? "px-3" : "px-3"}` }, ENTRIES.filter((en) => canUse(en, id.role)).map((en) => {
+      ), !collapsed && /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("a", { href: "index.html", className: "tbc-sb-title flex-1 text-[17px] font-semibold text-slate-900 hover:text-indigo-600 transition-colors" }, "TBC ONE"), /* @__PURE__ */ import_react3.default.createElement("button", { onClick: toggle, title: "隱藏側邊欄", "aria-label": "隱藏側邊欄", className: "tbc-sb-toggle w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" }, /* @__PURE__ */ import_react3.default.createElement(PanelLeft, { size: 18 })))), /* @__PURE__ */ import_react3.default.createElement("nav", { className: `flex flex-col gap-1 ${collapsed ? "px-3" : "px-3"}` }, ENTRIES.filter((en) => canUse(en, id)).map((en) => {
         if (en.children) return renderGroup(en);
         const on = active === en.id;
         const cls = `tbc-sb-item flex items-center ${collapsed ? "justify-center w-12 h-12 mx-auto" : "gap-3 px-4 h-11 w-full"} rounded-full text-[15px] transition-colors ${on ? "bg-indigo-50 text-indigo-600 font-semibold" : "text-slate-600 hover:bg-slate-100"}`;
@@ -13224,7 +13226,7 @@
     const [soon, setSoon] = (0, import_react4.useState)("");
     const timer = (0, import_react4.useRef)(null);
     const id = shell.identity || {};
-    const list = ENTRIES.filter((en) => canUse(en, id.role));
+    const list = ENTRIES.filter((en) => canUse(en, id));
     const showSoon = (label) => {
       setSoon(`${label} 尚未開放`);
       clearTimeout(timer.current);
@@ -14952,7 +14954,7 @@
       window.location.hash = r;
     };
     const h = import_react6.default.createElement;
-    const isAdmin = shell.identity && shell.identity.role === "admin";
+    const isAdmin = hasFeature(shell.identity, "service.settings");
     let content;
     if (!isAdmin) {
       content = h("div", { className: "h-full flex items-center justify-center text-slate-500" }, "權限不足");
@@ -14986,7 +14988,7 @@
       };
     }, []);
     const h = import_react6.default.createElement;
-    const allowed = shell.identity && ALLOWED_ROLES.includes(shell.identity.role);
+    const allowed = shell.identity && hasAnyOneFeature(shell.identity);
     let content;
     if (!allowed) {
       content = h("div", { className: "h-full flex items-center justify-center text-slate-500" }, "權限不足");
@@ -15020,7 +15022,7 @@
       return void 0;
     }
   };
-  var IDENTITY_CACHE_KEY = "tbc_identity_v1";
+  var IDENTITY_CACHE_KEY = "tbc_identity_v2";
   var readCachedIdentity = (uid) => {
     try {
       const c = JSON.parse(window.sessionStorage.getItem(IDENTITY_CACHE_KEY) || "null");
@@ -15055,7 +15057,7 @@
       let alive = true;
       loadIdentity(supabase, session).then(async (i) => {
         if (!alive) return;
-        if (i.status !== "ok" || !ALLOWED_ROLES.includes(i.role)) {
+        if (i.status !== "ok" || !hasAnyOneFeature(i)) {
           try {
             await supabase.auth.signOut();
           } catch (e) {
