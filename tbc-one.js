@@ -15074,7 +15074,7 @@
   };
   var AxCheck = ({ on, onClick }) => {
     const h = import_react6.default.createElement;
-    const draw = { transition: "stroke-dashoffset 0.6s ease-in", stroke: "#8c00ff", strokeWidth: 5, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
+    const draw = { transition: "stroke-dashoffset 0.6s ease-in", stroke: "#4b5563", strokeWidth: 5, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
     return h("button", { type: "button", role: "checkbox", "aria-checked": !!on, onClick, style: { border: "none", background: "transparent", padding: 0, cursor: "pointer", display: "inline-flex", verticalAlign: "middle" } },
       h("svg", { width: 18, height: 18, viewBox: "0 0 64 64", style: { display: "block" } },
         h("path", { d: "M 8 2 H 56 A 6 6 0 0 1 62 8 V 56 A 6 6 0 0 1 56 62 H 8 A 6 6 0 0 1 2 56 V 8 A 6 6 0 0 1 8 2 Z", style: { ...draw, fill: "rgba(207,205,205,0.425)", strokeDasharray: 800, strokeDashoffset: on ? 0 : 800 } }),
@@ -15093,6 +15093,19 @@
       } catch (e) { setMsg("操作失敗：" + (e.message || e)); }
     };
     const cols = d.roles.filter((r) => r.enabled && r.key !== "admin");
+    const [mods, setMods] = (0, import_react6.useState)([]);
+    const [dragKey, setDragKey] = (0, import_react6.useState)(null);
+    const [overKey, setOverKey] = (0, import_react6.useState)(null);
+    (0, import_react6.useEffect)(() => { setMods(d.modules); }, [d.modules]);
+    const dropOn = (targetKey) => {
+      const from = mods.findIndex((x) => x.key === dragKey), to = mods.findIndex((x) => x.key === targetKey);
+      setDragKey(null); setOverKey(null);
+      if (from < 0 || to < 0 || from === to) return;
+      const next = mods.slice();
+      next.splice(to, 0, next.splice(from, 1)[0]);
+      setMods(next);
+      run(Promise.all(next.map((x, i) => sb.from("app_modules").update({ sort_order: (i + 1) * 10 }).eq("key", x.key))).then((rs) => rs.find((x) => x.error) || null));
+    };
     const toggle = (f, r) => {
       if (r.key === "admin") return;
       const on = !!d.fr[f.key + "|" + r.key];
@@ -15104,11 +15117,12 @@
       d.error && h("p", { style: { color: "#dc2626" } }, "讀取失敗：" + d.error),
       msg && h("p", { style: { color: "#dc2626" } }, msg),
       d.loading && h("p", { style: AX.muted }, "讀取中…"),
-      d.modules.map((m) => {
+      mods.map((m) => {
         const feats = d.features.filter((f) => f.module_key === m.key);
-        return h("div", { key: m.key, style: { ...AX.card, opacity: m.enabled ? 1 : 0.6 } },
+        return h("div", { key: m.key, "data-axcard": "1", onDragOver: (e) => { if (dragKey) { e.preventDefault(); if (overKey !== m.key) setOverKey(m.key); } }, onDrop: (e) => { e.preventDefault(); dropOn(m.key); }, style: { ...AX.card, opacity: m.enabled ? (dragKey === m.key ? 0.4 : 1) : 0.6, outline: dragKey && overKey === m.key && dragKey !== m.key ? "2px dashed #94a3b8" : "none" } },
           h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } },
-            h("div", { style: { fontSize: 17, fontWeight: 700 } }, m.name),
+            h("div", { style: { fontSize: 17, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 } },
+              h("span", { draggable: true, title: "拖曳排序", onDragStart: (e) => { setDragKey(m.key); try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", m.key); const card = e.currentTarget.closest("[data-axcard]"); if (card) e.dataTransfer.setDragImage(card, 20, 20); } catch (x) { } }, onDragEnd: () => { setDragKey(null); setOverKey(null); }, style: { cursor: "grab", color: "#94a3b8", fontSize: 18, lineHeight: 1, userSelect: "none", padding: "2px 4px" } }, "⠿"), m.name),
             h("button", { type: "button", role: "switch", "aria-checked": !!m.enabled, title: m.enabled ? "已啟用" : "已停用", onClick: () => run(sb.from("app_modules").update({ enabled: !m.enabled }).eq("key", m.key)), style: { position: "relative", width: 46, height: 28, borderRadius: 14, border: "none", padding: 0, cursor: "pointer", background: m.enabled ? "#2196F3" : "#cbd5e1", transition: "background .2s" } }, h("span", { style: { position: "absolute", top: 3, left: m.enabled ? 21 : 3, width: 22, height: 22, borderRadius: 11, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.3)", transition: "left .2s" } }))),
           h("div", { style: { overflowX: "auto" } },
             h("table", { style: { borderCollapse: "collapse", width: "100%", fontSize: 14 } },
