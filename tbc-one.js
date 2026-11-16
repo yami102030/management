@@ -13011,7 +13011,7 @@
       id: "access",
       label: "權限管理",
       Icon: ShieldCheck,
-      href: "access.html",
+      href: "access.html#roles",
       adminOnly: true,
       children: [
         { id: "roles", label: "角色權限", href: "access.html#roles" },
@@ -14946,7 +14946,7 @@
   var ACCESS_ROUTES = ["roles", "modules"];
   var readAccessRoute = () => {
     const r = (window.location.hash || "").replace("#", "");
-    return ACCESS_ROUTES.includes(r) ? r : "home";
+    return ACCESS_ROUTES.includes(r) ? r : "roles";
   };
   var AX = {
     card: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 20, marginBottom: 16 },
