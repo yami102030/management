@@ -14984,22 +14984,7 @@
     }, [tick]);
     return [d, () => setTick((t) => t + 1)];
   };
-  var AccessHome = () => {
-    const h = import_react6.default.createElement;
-    const cards = [
-      { t: "角色權限", s: "新增、停用及設定角色", href: "#roles", Icon: ShieldCheck },
-      { t: "模組管理", s: "模組啟用狀態，以及每個身分能用哪些功能", href: "#modules", Icon: ListChecks },
-      { t: "帳號授權", s: "到同工資料中心，點選指定每個人的身分", href: "serve.html#members", Icon: Users }
-    ];
-    return h("div", { style: { maxWidth: 720, margin: "0 auto", padding: "32px 20px" } },
-      h("h1", { style: { fontSize: 28, fontWeight: 700, color: "#0f172a", margin: 0 } }, "權限管理中心"),
-      h("p", { style: { ...AX.muted, margin: "8px 0 20px", fontSize: 15 } }, "管理系統身分、模組授權與資料存取範圍"),
-      h("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 } },
-        cards.map((c) => h("a", { key: c.t, href: c.href, style: { display: "block", background: "#f1f5f9", borderRadius: 16, padding: 20, textDecoration: "none", color: "#0f172a" } },
-          h(c.Icon, { size: 22 }),
-          h("div", { style: { fontSize: 18, fontWeight: 700, margin: "14px 0 6px" } }, c.t),
-          h("div", { style: { fontSize: 14, color: "#64748b", lineHeight: 1.5 } }, c.s)))));
-  };
+  var AccessHome = () => import_react6.default.createElement("div", null);
   var RolesView = ({ sb }) => {
     const h = import_react6.default.createElement;
     const [d, reload] = useAccessData(sb);
