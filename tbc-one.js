@@ -12995,6 +12995,17 @@
       ]
     },
     {
+      id: "access",
+      label: "權限管理",
+      Icon: ShieldCheck,
+      href: "access.html",
+      adminOnly: true,
+      children: [
+        { id: "roles", label: "身分管理", href: "access.html#roles" },
+        { id: "modules", label: "模組管理", href: "access.html#modules" }
+      ]
+    },
+    {
       id: "venue",
       label: "場地預約",
       Icon: CalendarClock,
@@ -13017,7 +13028,7 @@
   var TBC_ONE_FEATURES = ["work.log", "venue.manage", "service.settings"];
   var hasFeature = (id, key) => !!id && (id.role === "admin" || Array.isArray(id.features) && id.features.includes(key));
   var hasAnyOneFeature = (id) => TBC_ONE_FEATURES.some((k) => hasFeature(id, k));
-  var canUse = (entry, id) => !entry.feature || hasFeature(id, entry.feature);
+  var canUse = (entry, id) => entry.adminOnly ? !!id && (id.role === "admin" || Array.isArray(id.roles) && id.roles.includes("admin")) : !entry.feature || hasFeature(id, entry.feature);
   var toLoginEmail = (account) => {
     const v = String(account || "").trim().toLowerCase();
     return v.includes("@") ? v : `${v}@tbc.gmail.com`;
@@ -14932,6 +14943,197 @@
   document.head.appendChild(style);
   var supabase = window.__TBC_SB || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   window.__TBC = { React: import_react6.default, supabase };
+  var ACCESS_ROUTES = ["roles", "modules"];
+  var readAccessRoute = () => {
+    const r = (window.location.hash || "").replace("#", "");
+    return ACCESS_ROUTES.includes(r) ? r : "home";
+  };
+  var AX = {
+    card: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 20, marginBottom: 16 },
+    btn: { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 14, cursor: "pointer", color: "#334155" },
+    btnOn: { border: "1px solid #4f46e5", background: "#4f46e5", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 14, cursor: "pointer" },
+    input: { border: "1px solid #cbd5e1", borderRadius: 8, padding: "6px 10px", fontSize: 14, minWidth: 0 },
+    muted: { color: "#64748b", fontSize: 13 }
+  };
+  var useAccessData = (sb) => {
+    const [d, setD] = (0, import_react6.useState)({ loading: true, error: "", roles: [], modules: [], features: [], fr: {}, counts: {} });
+    const [tick, setTick] = (0, import_react6.useState)(0);
+    (0, import_react6.useEffect)(() => {
+      let alive = true;
+      (async () => {
+        try {
+          const [r, m, f, fr, ac] = await Promise.all([
+            sb.from("app_roles").select("*").order("sort_order"),
+            sb.from("app_modules").select("*").order("sort_order"),
+            sb.from("app_features").select("*").order("sort_order"),
+            sb.from("feature_roles").select("*"),
+            sb.rpc("admin_list_accounts")
+          ]);
+          for (const x of [r, m, f, fr]) if (x.error) throw x.error;
+          const map = {};
+          (fr.data || []).forEach((x) => { map[x.feature_key + "|" + x.role_key] = true; });
+          const counts = {};
+          (ac.data || []).forEach((a) => (a.roles || [a.role]).forEach((k) => { counts[k] = (counts[k] || 0) + 1; }));
+          if (alive) setD({ loading: false, error: "", roles: r.data || [], modules: m.data || [], features: f.data || [], fr: map, counts });
+        } catch (e) {
+          if (alive) setD((p) => ({ ...p, loading: false, error: e.message || String(e) }));
+        }
+      })();
+      return () => { alive = false; };
+    }, [tick]);
+    return [d, () => setTick((t) => t + 1)];
+  };
+  var AccessHome = () => {
+    const h = import_react6.default.createElement;
+    const cards = [
+      { t: "身分管理", s: "新增、停用及設定身分", href: "#roles", Icon: ShieldCheck },
+      { t: "模組管理", s: "模組啟用狀態，以及每個身分能用哪些功能", href: "#modules", Icon: ListChecks },
+      { t: "帳號授權", s: "到同工資料中心，點選指定每個人的身分", href: "serve.html#members", Icon: Users }
+    ];
+    return h("div", { style: { maxWidth: 720, margin: "0 auto", padding: "32px 20px" } },
+      h("h1", { style: { fontSize: 28, fontWeight: 700, color: "#0f172a", margin: 0 } }, "權限管理中心"),
+      h("p", { style: { ...AX.muted, margin: "8px 0 20px", fontSize: 15 } }, "管理系統身分、模組授權與資料存取範圍"),
+      h("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 } },
+        cards.map((c) => h("a", { key: c.t, href: c.href, style: { display: "block", background: "#f1f5f9", borderRadius: 16, padding: 20, textDecoration: "none", color: "#0f172a" } },
+          h(c.Icon, { size: 22 }),
+          h("div", { style: { fontSize: 18, fontWeight: 700, margin: "14px 0 6px" } }, c.t),
+          h("div", { style: { fontSize: 14, color: "#64748b", lineHeight: 1.5 } }, c.s)))));
+  };
+  var RolesView = ({ sb }) => {
+    const h = import_react6.default.createElement;
+    const [d, reload] = useAccessData(sb);
+    const [msg, setMsg] = (0, import_react6.useState)("");
+    const [newName, setNewName] = (0, import_react6.useState)("");
+    const [edit, setEdit] = (0, import_react6.useState)({});
+    const run = async (p) => {
+      setMsg("");
+      try {
+        const r = await p;
+        if (r && r.error) throw r.error;
+        reload();
+      } catch (e) { setMsg("操作失敗：" + (e.message || e)); }
+    };
+    const locked = (k) => k === "admin" || k === "member";
+    const movable = d.roles.filter((r) => r.key !== "admin");
+    const move = (key, dir) => {
+      const i = movable.findIndex((r) => r.key === key), j = i + dir;
+      if (i < 0 || j < 0 || j >= movable.length) return;
+      const a = movable[i], b = movable[j];
+      run((async () => {
+        const x = await sb.from("app_roles").update({ sort_order: b.sort_order }).eq("key", a.key);
+        if (x.error) return x;
+        return sb.from("app_roles").update({ sort_order: a.sort_order }).eq("key", b.key);
+      })());
+    };
+    const add = () => {
+      const name = newName.trim();
+      if (!name) return;
+      const top = Math.max(0, ...movable.map((r) => r.sort_order));
+      const key = "r_" + Math.random().toString(36).slice(2, 8);
+      setNewName("");
+      run(sb.from("app_roles").insert({ key, name, sort_order: top + 5, is_system: false, enabled: true }));
+    };
+    const remove = (r) => {
+      if (!window.confirm("確定刪除「" + r.name + "」？")) return;
+      run(sb.from("app_roles").delete().eq("key", r.key));
+    };
+    return h("div", { style: { maxWidth: 720, margin: "0 auto", padding: "32px 20px" } },
+      h("h1", { style: { fontSize: 24, fontWeight: 700, margin: 0 } }, "身分管理"),
+      h("p", { style: { ...AX.muted, margin: "6px 0 16px" } }, "由上往下，越下面權限等級越高；一個人有多個身分時，畫面顯示最高的那個。「會友」與「管理員」是固定的，不能停用或刪除。"),
+      d.error && h("p", { style: { color: "#dc2626" } }, "讀取失敗：" + d.error),
+      msg && h("p", { style: { color: "#dc2626" } }, msg),
+      h("div", { style: AX.card },
+        d.loading ? h("p", { style: AX.muted }, "讀取中…") : d.roles.map((r, idx) => {
+          const sys = locked(r.key);
+          const canMove = !sys || r.key === "member" ? false : true;
+          const editing = edit[r.key] !== undefined;
+          return h("div", { key: r.key, style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "10px 0", borderTop: idx ? "1px solid #f1f5f9" : "none", opacity: r.enabled ? 1 : 0.5 } },
+            h("div", { style: { flex: 1, minWidth: 120 } },
+              editing
+                ? h("input", { style: AX.input, value: edit[r.key], onChange: (e) => setEdit({ ...edit, [r.key]: e.target.value }) })
+                : h("span", { style: { fontSize: 16, fontWeight: 600 } }, r.name),
+              h("span", { style: { ...AX.muted, marginLeft: 10 } }, (d.counts[r.key] || 0) + " 人" + (sys ? "・固定" : "") + (r.enabled ? "" : "・已停用"))),
+            editing
+              ? h(import_react6.default.Fragment, null,
+                  h("button", { style: AX.btnOn, onClick: () => { const n = String(edit[r.key]).trim(); const e2 = { ...edit }; delete e2[r.key]; setEdit(e2); if (n && n !== r.name) run(sb.from("app_roles").update({ name: n }).eq("key", r.key)); } }, "儲存"),
+                  h("button", { style: AX.btn, onClick: () => { const e2 = { ...edit }; delete e2[r.key]; setEdit(e2); } }, "取消"))
+              : h(import_react6.default.Fragment, null,
+                  r.key !== "admin" && h("button", { style: AX.btn, title: "往上（權限較低）", disabled: !canMove || idx <= 1, onClick: () => move(r.key, -1) }, "↑"),
+                  r.key !== "admin" && h("button", { style: AX.btn, title: "往下（權限較高）", disabled: !canMove || idx >= movable.length - 1, onClick: () => move(r.key, 1) }, "↓"),
+                  h("button", { style: AX.btn, onClick: () => setEdit({ ...edit, [r.key]: r.name }) }, "改名"),
+                  !sys && h("button", { style: AX.btn, onClick: () => run(sb.from("app_roles").update({ enabled: !r.enabled }).eq("key", r.key)) }, r.enabled ? "停用" : "啟用"),
+                  !sys && !(d.counts[r.key] > 0) && h("button", { style: { ...AX.btn, color: "#dc2626" }, onClick: () => remove(r) }, "刪除")));
+        })),
+      h("div", { style: AX.card },
+        h("div", { style: { fontWeight: 600, marginBottom: 10 } }, "新增身分"),
+        h("div", { style: { display: "flex", gap: 8 } },
+          h("input", { style: { ...AX.input, flex: 1 }, placeholder: "身分名稱，例如：小組長", value: newName, onChange: (e) => setNewName(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") add(); } }),
+          h("button", { style: AX.btnOn, onClick: add }, "新增")),
+        h("p", { style: { ...AX.muted, margin: "10px 0 0" } }, "新增後，到「模組管理」勾選這個身分能用哪些功能。")));
+  };
+  var ModulesView = ({ sb }) => {
+    const h = import_react6.default.createElement;
+    const [d, reload] = useAccessData(sb);
+    const [msg, setMsg] = (0, import_react6.useState)("");
+    const run = async (p) => {
+      setMsg("");
+      try {
+        const r = await p;
+        if (r && r.error) throw r.error;
+        reload();
+      } catch (e) { setMsg("操作失敗：" + (e.message || e)); }
+    };
+    const cols = d.roles.filter((r) => r.enabled);
+    const toggle = (f, r) => {
+      if (r.key === "admin") return;
+      const on = !!d.fr[f.key + "|" + r.key];
+      run(on ? sb.from("feature_roles").delete().eq("feature_key", f.key).eq("role_key", r.key) : sb.from("feature_roles").insert({ feature_key: f.key, role_key: r.key }));
+    };
+    return h("div", { style: { maxWidth: 960, margin: "0 auto", padding: "32px 20px" } },
+      h("h1", { style: { fontSize: 24, fontWeight: 700, margin: 0 } }, "模組管理"),
+      h("p", { style: { ...AX.muted, margin: "6px 0 16px" } }, "點格子切換：打勾＝這個身分可以用這項功能。一個人的權限是他所有身分的加總；管理員永遠全部可用。"),
+      d.error && h("p", { style: { color: "#dc2626" } }, "讀取失敗：" + d.error),
+      msg && h("p", { style: { color: "#dc2626" } }, msg),
+      d.loading && h("p", { style: AX.muted }, "讀取中…"),
+      d.modules.map((m) => {
+        const feats = d.features.filter((f) => f.module_key === m.key);
+        return h("div", { key: m.key, style: { ...AX.card, opacity: m.enabled ? 1 : 0.6 } },
+          h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } },
+            h("div", { style: { fontSize: 17, fontWeight: 700 } }, m.name, !m.enabled && h("span", { style: { ...AX.muted, marginLeft: 8 } }, "已停用（管理員以外的人都不能用）")),
+            h("button", { style: m.enabled ? AX.btn : AX.btnOn, onClick: () => run(sb.from("app_modules").update({ enabled: !m.enabled }).eq("key", m.key)) }, m.enabled ? "停用模組" : "啟用模組")),
+          h("div", { style: { overflowX: "auto" } },
+            h("table", { style: { borderCollapse: "collapse", width: "100%", fontSize: 14 } },
+              h("thead", null, h("tr", null,
+                h("th", { style: { textAlign: "left", padding: "6px 8px", color: "#64748b", fontWeight: 500 } }, "功能"),
+                cols.map((r) => h("th", { key: r.key, style: { padding: "6px 8px", color: "#64748b", fontWeight: 500, whiteSpace: "nowrap" } }, r.name)))),
+              h("tbody", null, feats.map((f) => h("tr", { key: f.key, style: { borderTop: "1px solid #f1f5f9" } },
+                h("td", { style: { padding: "8px", minWidth: 150 } }, f.name,
+                  !f.enforced && h("div", { style: { fontSize: 11, color: "#b45309" } }, "只控制畫面入口，資料庫沒有擋")),
+                cols.map((r) => {
+                  const admin = r.key === "admin";
+                  const on = admin || !!d.fr[f.key + "|" + r.key];
+                  return h("td", { key: r.key, style: { textAlign: "center", padding: "4px" } },
+                    h("button", { onClick: () => toggle(f, r), disabled: admin, title: admin ? "管理員固定全開" : "", style: { width: 34, height: 34, borderRadius: 8, border: on ? "2px solid #4f46e5" : "2px solid #e2e8f0", background: on ? "#eef2ff" : "#fff", color: "#4f46e5", cursor: admin ? "not-allowed" : "pointer", opacity: admin ? 0.6 : 1, fontSize: 16 } }, on ? "✓" : ""));
+                })))))));
+      }));
+  };
+  var AccessPage = ({ session, supabase: sb, shell }) => {
+    const h = import_react6.default.createElement;
+    const [route, setRoute] = (0, import_react6.useState)(readAccessRoute);
+    (0, import_react6.useEffect)(() => {
+      const onHash = () => setRoute(readAccessRoute());
+      window.addEventListener("hashchange", onHash);
+      return () => window.removeEventListener("hashchange", onHash);
+    }, []);
+    const id = shell.identity || {};
+    const isAdmin = id.role === "admin" || (id.roles || []).includes("admin");
+    let content;
+    if (!isAdmin) content = h("div", { className: "h-full flex items-center justify-center text-slate-500" }, "權限不足");
+    else if (route === "roles") content = h(RolesView, { sb });
+    else if (route === "modules") content = h(ModulesView, { sb });
+    else content = h(AccessHome, null);
+    return h("div", { className: "flex h-[100dvh] w-full bg-slate-50 overflow-hidden relative" }, h(Sidebar, { active: "access", activeChild: route === "home" ? null : route, shell }), h("div", { className: "flex-1 min-w-0 h-full relative overflow-y-auto" }, content));
+  };
   var SERVE_ROUTES = ["members", "scheduling", "insights", "control"];
   var readServeRoute = () => {
     const r = (window.location.hash || "").replace("#", "");
@@ -15096,6 +15298,7 @@
     if (identity.status !== "ok") return /* @__PURE__ */ import_react6.default.createElement("div", { className: "h-[100dvh] bg-slate-50" });
     const shell = { identity, onLogout };
     if (page === "serve") return /* @__PURE__ */ import_react6.default.createElement(ServePage, { session, supabase, shell });
+    if (page === "access") return /* @__PURE__ */ import_react6.default.createElement(AccessPage, { session, supabase, shell });
     if (page === "venue") return /* @__PURE__ */ import_react6.default.createElement(VenuePage, { session, supabase, shell });
     if (page === "work") return /* @__PURE__ */ import_react6.default.createElement(WorkLog_default, { session, supabase, utils: {}, shell });
     return /* @__PURE__ */ import_react6.default.createElement(Home_default, { shell });
