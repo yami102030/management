@@ -15159,6 +15159,31 @@
     }, [tick]);
     return [d, () => setTick((t) => t + 1)];
   };
+  var BlueCheck = ({ on }) => import_react6.default.createElement("span", { style: { width: 20, height: 20, borderRadius: 5, flexShrink: 0, position: "relative", display: "inline-block", boxSizing: "border-box", background: on ? "#2196F3" : "#fff", border: on ? "2px solid #2196F3" : "2px solid #cbd5e1", transition: "all .2s" } }, on && import_react6.default.createElement("span", { style: { position: "absolute", left: 5, top: 1, width: 5, height: 10, border: "solid #fff", borderWidth: "0 2px 2px 0", transform: "rotate(45deg)" } }));
+  var RolePicker = ({ roles, checked, onChange, countOf }) => {
+    const h = import_react6.default.createElement;
+    const [open, setOpen] = (0, import_react6.useState)(false);
+    const ref = (0, import_react6.useRef)(null);
+    (0, import_react6.useEffect)(() => {
+      const f = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+      document.addEventListener("mousedown", f);
+      return () => document.removeEventListener("mousedown", f);
+    }, []);
+    const on = roles.filter((r) => checked[r.key]);
+    const label = on.length === 0 ? "身分選取" : on.length === roles.length ? "全部身分" : on.map((r) => r.name).join("、");
+    const link = { border: "none", background: "transparent", color: "#2563eb", textDecoration: "underline", cursor: "pointer", fontSize: 14, padding: 0 };
+    return h("div", { ref, style: { position: "relative" } },
+      h("button", { type: "button", onClick: () => setOpen(!open), style: { display: "flex", alignItems: "center", gap: 10, border: open ? "1.5px solid #2196F3" : "1px solid #cbd5e1", background: "#fff", borderRadius: 10, padding: "9px 12px", fontSize: 15, cursor: "pointer", minWidth: 150, maxWidth: 260, justifyContent: "space-between" } },
+        h("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, label), h(ChevronDown, { size: 18 })),
+      open && h("div", { style: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, minWidth: 280, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 8px 24px rgba(15,23,42,.12)" } },
+        h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
+          h("span", { style: { color: "#475569", fontSize: 14 } }, "勾選要選取的身分"),
+          h("span", { style: { display: "flex", gap: 14 } },
+            h("button", { type: "button", style: link, onClick: () => { const c = {}; roles.forEach((r) => { c[r.key] = true; }); onChange(c); } }, "全選"),
+            h("button", { type: "button", style: link, onClick: () => onChange({}) }, "取消"))),
+        roles.map((r) => h("div", { key: r.key, onClick: () => onChange({ ...checked, [r.key]: !checked[r.key] }), style: { display: "flex", alignItems: "center", gap: 10, padding: "7px 2px", cursor: "pointer", fontSize: 15 } },
+          h(BlueCheck, { on: !!checked[r.key] }), h("span", { style: { flex: 1 } }, r.name), h("span", { style: AX.muted }, countOf(r.key) + "人")))));
+  };
   var PeopleView = ({ sb }) => {
     const h = import_react6.default.createElement;
     const [d, reload] = usePeopleData(sb);
@@ -15216,26 +15241,27 @@
       setBusy(false);
       reload();
     };
-    const pickByRole = (key) => {
-      if (!key) return;
+    const [checkedRoles, setCheckedRoles] = (0, import_react6.useState)({});
+    const onPickRoles = (c) => {
+      setCheckedRoles(c);
+      const keys = Object.keys(c).filter((k) => c[k]);
       const n = {};
-      d.people.forEach((p) => { if (p.roles.includes(key)) n[p.id] = true; });
+      if (keys.length) d.people.forEach((p) => { if (keys.some((k) => p.roles.includes(k))) n[p.id] = true; });
       setSel(n);
     };
     const chip = (on, fixed) => ({ padding: "5px 12px", borderRadius: 8, fontSize: 13, cursor: fixed ? "default" : "pointer", border: on ? "2px solid #4f46e5" : "2px solid #f1f5f9", background: fixed ? "#f1f5f9" : on ? "#eef2ff" : "#f8fafc", color: fixed ? "#94a3b8" : on ? "#4338ca" : "#64748b", fontWeight: 500 });
     const allSel = list.length > 0 && list.every((p) => sel[p.id]);
     return h("div", { style: { maxWidth: 960, margin: "0 auto", padding: "32px 20px" } },
       h("h1", { style: { fontSize: 24, fontWeight: 700, margin: 0 } }, "人員授權"),
-      h("p", { style: { ...AX.muted, margin: "6px 0 16px" } }, "點選身分即可加上或拿掉；勾選多人後，可以一次加上或移除同一個身分。"),
+      h("div", { style: { height: 12 } }),
       d.error && h("p", { style: { color: "#dc2626" } }, "讀取失敗：" + d.error),
       msg.t && h("p", { style: { color: msg.ok ? "#15803d" : "#dc2626", fontSize: 14 } }, msg.t),
-      h("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 } },
-        h("input", { style: { ...AX.input, flex: 1, minWidth: 160 }, placeholder: "搜尋姓名或帳號", value: q, onChange: (e) => setQ(e.target.value) }),
-        h("select", { style: AX.input, value: filter, onChange: (e) => setFilter(e.target.value) },
-          h("option", { value: "all" }, "全部"), h("option", { value: "reg" }, "已註冊"), h("option", { value: "unreg" }, "未註冊")),
-        h("select", { style: AX.input, value: "", onChange: (e) => pickByRole(e.target.value) },
-          h("option", { value: "" }, "依身分整組選取…"),
-          d.roles.filter((r) => r.enabled).map((r) => h("option", { key: r.key, value: r.key }, r.name + "（" + d.people.filter((p) => p.roles.includes(r.key)).length + "人）"))),
+      h("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12, alignItems: "center" } },
+        h("div", { style: { position: "relative", flex: 1, minWidth: 180 } },
+          h(Search, { size: 18, style: { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" } }),
+          h("input", { style: { width: "100%", boxSizing: "border-box", border: "none", background: "#f1f5f9", borderRadius: 12, padding: "10px 36px 10px 38px", fontSize: 15, outline: "none" }, placeholder: "搜尋", value: q, onChange: (e) => setQ(e.target.value) }),
+          q && h("button", { type: "button", "aria-label": "清除", onClick: () => setQ(""), style: { position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: "#64748b", display: "flex", padding: 4 } }, h(X, { size: 16 }))),
+        h(RolePicker, { roles: d.roles.filter((r) => r.enabled), checked: checkedRoles, onChange: onPickRoles, countOf: (k) => d.people.filter((p) => p.roles.includes(k)).length }),
         h("button", { style: AX.btn, onClick: () => { const n = { ...sel }; if (allSel) list.forEach((p) => { delete n[p.id]; }); else list.forEach((p) => { n[p.id] = true; }); setSel(n); } }, allSel ? "取消全選" : "全選目前清單"),
         selected.length > 0 && h("button", { style: AX.btn, onClick: () => setSel({}) }, "清除選取")),
       selected.length > 0 && h("div", { style: { ...AX.card, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: 12, background: "#eef2ff", borderColor: "#c7d2fe" } },
@@ -15248,7 +15274,7 @@
         list.map((p, idx) => h("div", { key: p.id, style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "10px 0", borderTop: idx ? "1px solid #f1f5f9" : "none" } },
           h(AxCheck, { on: !!sel[p.id], onClick: () => setSel({ ...sel, [p.id]: !sel[p.id] }) }),
           h("div", { style: { width: 170, minWidth: 130 } },
-            h("div", { style: { fontWeight: 600, fontSize: 15 } }, p.name, !p.registered && h("span", { style: { ...AX.muted, marginLeft: 6, fontWeight: 400 } }, "未註冊")),
+            h("div", { style: { fontWeight: 600, fontSize: 15 } }, h("a", { href: "serve.html?member=" + encodeURIComponent(p.id) + "#members", title: "編輯同工資料", style: { color: "#1e293b", textDecoration: "underline", textDecorationColor: "#cbd5e1", textUnderlineOffset: 3 } }, p.name), !p.registered && h("span", { style: { ...AX.muted, marginLeft: 6, fontWeight: 400 } }, "未註冊")),
             h("div", { style: { ...AX.muted, fontSize: 12 } }, p.login || "未填帳號", p.shared ? "・共用帳號" : "")),
           h("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", flex: 1 } },
             h("span", { style: chip(true, true) }, nameOf("member")),
