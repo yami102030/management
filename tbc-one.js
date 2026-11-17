@@ -13015,7 +13015,8 @@
       adminOnly: true,
       children: [
         { id: "roles", label: "角色權限", href: "access.html#roles" },
-        { id: "modules", label: "模組管理", href: "access.html#modules" }
+        { id: "modules", label: "模組管理", href: "access.html#modules" },
+        { id: "people", label: "人員授權", href: "access.html#people" }
       ]
     }
   ];
@@ -14943,7 +14944,7 @@
   document.head.appendChild(style);
   var supabase = window.__TBC_SB || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   window.__TBC = { React: import_react6.default, supabase };
-  var ACCESS_ROUTES = ["roles", "modules"];
+  var ACCESS_ROUTES = ["roles", "modules", "people"];
   var readAccessRoute = () => {
     const r = (window.location.hash || "").replace("#", "");
     return ACCESS_ROUTES.includes(r) ? r : "roles";
@@ -15124,6 +15125,136 @@
                 })))))));
       }));
   };
+  var usePeopleData = (sb) => {
+    const [d, setD] = (0, import_react6.useState)({ loading: true, error: "", people: [], roles: [] });
+    const [tick, setTick] = (0, import_react6.useState)(0);
+    (0, import_react6.useEffect)(() => {
+      let alive = true;
+      (async () => {
+        try {
+          const [m, ac, r, pr] = await Promise.all([
+            sb.from("members").select("id,name,email,group_id").order("name"),
+            sb.rpc("admin_list_accounts"),
+            sb.from("app_roles").select("*").order("sort_order"),
+            sb.rpc("admin_get_pending_roles")
+          ]);
+          for (const x of [m, ac, r, pr]) if (x.error) throw x.error;
+          const accMap = {};
+          (ac.data || []).forEach((a) => { accMap[String(a.account || "").trim().toLowerCase()] = a; });
+          const pend = {};
+          (pr.data || []).forEach((p) => { (pend[p.member_id] = pend[p.member_id] || []).push(p.role); });
+          const toKey = (e) => { const v = String(e || "").trim().toLowerCase(); return !v ? "" : v.includes("@") ? v : v + "@tbc.gmail.com"; };
+          const people = (m.data || []).filter((x) => !String(x.name || "").startsWith("SYSTEM_")).map((x) => {
+            const key = toKey(x.email);
+            const acct = key ? accMap[key] : void 0;
+            const roles = acct ? (acct.roles || [acct.role]) : ["member"].concat(pend[x.id] || []);
+            return { id: x.id, name: x.name, login: x.email || "", uid: acct ? acct.user_uid : null, registered: !!acct, shared: !!acct && acct.member_count > 1, roles };
+          });
+          if (alive) setD({ loading: false, error: "", people, roles: r.data || [] });
+        } catch (e) {
+          if (alive) setD((p) => ({ ...p, loading: false, error: e.message || String(e) }));
+        }
+      })();
+      return () => { alive = false; };
+    }, [tick]);
+    return [d, () => setTick((t) => t + 1)];
+  };
+  var PeopleView = ({ sb }) => {
+    const h = import_react6.default.createElement;
+    const [d, reload] = usePeopleData(sb);
+    const [q, setQ] = (0, import_react6.useState)("");
+    const [filter, setFilter] = (0, import_react6.useState)("all");
+    const [sel, setSel] = (0, import_react6.useState)({});
+    const [batchRole, setBatchRole] = (0, import_react6.useState)("");
+    const [msg, setMsg] = (0, import_react6.useState)({ t: "", ok: true });
+    const [busy, setBusy] = (0, import_react6.useState)(false);
+    const nameOf = (k) => (d.roles.find((r) => r.key === k) || {}).name || k;
+    const manual = d.roles.filter((r) => r.enabled && r.key !== "member" && r.key !== "coworker");
+    (0, import_react6.useEffect)(() => { if (!batchRole && manual.length) setBatchRole(manual[0].key); }, [manual.length]);
+    const list = d.people.filter((p) => {
+      if (filter === "unreg" && p.registered) return false;
+      if (filter === "reg" && !p.registered) return false;
+      const t = q.trim().toLowerCase();
+      return !t || String(p.name).toLowerCase().includes(t) || String(p.login).toLowerCase().includes(t);
+    });
+    const selected = d.people.filter((p) => sel[p.id]);
+    const changeOne = async (p, key, on) => {
+      if (p.registered) {
+        return sb.rpc(on ? "admin_add_role" : "admin_remove_role", { p_user: p.uid, p_role: key });
+      }
+      const cur = p.roles.filter((r) => r !== "member" && r !== "coworker");
+      const next = on ? Array.from(new Set(cur.concat(key))) : cur.filter((r) => r !== key);
+      return sb.rpc("admin_set_pending_roles", { p_member: p.id, p_roles: next });
+    };
+    const toggleOne = async (p, key) => {
+      if (busy) return;
+      const on = !p.roles.includes(key);
+      if (key === "admin" && !on && !window.confirm("確定移除「" + p.name + "」的管理員身分？")) return;
+      setBusy(true); setMsg({ t: "", ok: true });
+      try {
+        const r = await changeOne(p, key, on);
+        if (r && r.error) throw r.error;
+        reload();
+      } catch (e) { setMsg({ t: "操作失敗：" + (e.message || e), ok: false }); }
+      setBusy(false);
+    };
+    const applyBatch = async (on) => {
+      if (busy || !selected.length || !batchRole) return;
+      const label = (on ? "加上" : "移除") + "「" + nameOf(batchRole) + "」";
+      if (!window.confirm("確定對 " + selected.length + " 人" + label + "？")) return;
+      setBusy(true); setMsg({ t: "", ok: true });
+      let okN = 0, skipN = 0; const fails = [];
+      for (const p of selected) {
+        if (p.roles.includes(batchRole) === on) { skipN++; continue; }
+        try {
+          const r = await changeOne(p, batchRole, on);
+          if (r && r.error) throw r.error;
+          okN++;
+        } catch (e) { fails.push(p.name + "（" + (e.message || e) + "）"); }
+      }
+      setMsg({ t: "已" + label + "：成功 " + okN + " 人" + (skipN ? "，原本就是這樣 " + skipN + " 人" : "") + (fails.length ? "；失敗 " + fails.length + " 人：" + fails.join("、") : ""), ok: !fails.length });
+      setBusy(false);
+      reload();
+    };
+    const pickByRole = (key) => {
+      if (!key) return;
+      const n = {};
+      d.people.forEach((p) => { if (p.roles.includes(key)) n[p.id] = true; });
+      setSel(n);
+    };
+    const chip = (on, fixed) => ({ padding: "5px 12px", borderRadius: 8, fontSize: 13, cursor: fixed ? "default" : "pointer", border: on ? "2px solid #4f46e5" : "2px solid #f1f5f9", background: fixed ? "#f1f5f9" : on ? "#eef2ff" : "#f8fafc", color: fixed ? "#94a3b8" : on ? "#4338ca" : "#64748b", fontWeight: 500 });
+    const allSel = list.length > 0 && list.every((p) => sel[p.id]);
+    return h("div", { style: { maxWidth: 960, margin: "0 auto", padding: "32px 20px" } },
+      h("h1", { style: { fontSize: 24, fontWeight: 700, margin: 0 } }, "人員授權"),
+      h("p", { style: { ...AX.muted, margin: "6px 0 16px" } }, "點選身分即可加上或拿掉；勾選多人後，可以一次加上或移除同一個身分。"),
+      d.error && h("p", { style: { color: "#dc2626" } }, "讀取失敗：" + d.error),
+      msg.t && h("p", { style: { color: msg.ok ? "#15803d" : "#dc2626", fontSize: 14 } }, msg.t),
+      h("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 } },
+        h("input", { style: { ...AX.input, flex: 1, minWidth: 160 }, placeholder: "搜尋姓名或帳號", value: q, onChange: (e) => setQ(e.target.value) }),
+        h("select", { style: AX.input, value: filter, onChange: (e) => setFilter(e.target.value) },
+          h("option", { value: "all" }, "全部"), h("option", { value: "reg" }, "已註冊"), h("option", { value: "unreg" }, "未註冊")),
+        h("select", { style: AX.input, value: "", onChange: (e) => pickByRole(e.target.value) },
+          h("option", { value: "" }, "依身分整組選取…"),
+          d.roles.filter((r) => r.enabled).map((r) => h("option", { key: r.key, value: r.key }, r.name + "（" + d.people.filter((p) => p.roles.includes(r.key)).length + "人）"))),
+        h("button", { style: AX.btn, onClick: () => { const n = { ...sel }; if (allSel) list.forEach((p) => { delete n[p.id]; }); else list.forEach((p) => { n[p.id] = true; }); setSel(n); } }, allSel ? "取消全選" : "全選目前清單"),
+        selected.length > 0 && h("button", { style: AX.btn, onClick: () => setSel({}) }, "清除選取")),
+      selected.length > 0 && h("div", { style: { ...AX.card, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: 12, background: "#eef2ff", borderColor: "#c7d2fe" } },
+        h("span", { style: { fontWeight: 600 } }, "已選 " + selected.length + " 人"),
+        h("select", { style: AX.input, value: batchRole, onChange: (e) => setBatchRole(e.target.value) }, manual.map((r) => h("option", { key: r.key, value: r.key }, r.name))),
+        h("button", { style: AX.btnOn, disabled: busy, onClick: () => applyBatch(true) }, "加上身分"),
+        h("button", { style: AX.btn, disabled: busy, onClick: () => applyBatch(false) }, "移除身分")),
+      h("div", { style: AX.card },
+        d.loading ? h("p", { style: AX.muted }, "讀取中…") : list.length === 0 ? h("p", { style: AX.muted }, "沒有符合的人員") :
+        list.map((p, idx) => h("div", { key: p.id, style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "10px 0", borderTop: idx ? "1px solid #f1f5f9" : "none" } },
+          h(AxCheck, { on: !!sel[p.id], onClick: () => setSel({ ...sel, [p.id]: !sel[p.id] }) }),
+          h("div", { style: { width: 170, minWidth: 130 } },
+            h("div", { style: { fontWeight: 600, fontSize: 15 } }, p.name, !p.registered && h("span", { style: { ...AX.muted, marginLeft: 6, fontWeight: 400 } }, "未註冊")),
+            h("div", { style: { ...AX.muted, fontSize: 12 } }, p.login || "未填帳號", p.shared ? "・共用帳號" : "")),
+          h("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", flex: 1 } },
+            h("span", { style: chip(true, true) }, nameOf("member")),
+            p.roles.includes("coworker") && h("span", { style: chip(true, true) }, nameOf("coworker")),
+            manual.map((r) => h("button", { key: r.key, type: "button", disabled: busy, style: chip(p.roles.includes(r.key), false), onClick: () => toggleOne(p, r.key) }, r.name)))))));
+  };
   var AccessPage = ({ session, supabase: sb, shell }) => {
     const h = import_react6.default.createElement;
     const [route, setRoute] = (0, import_react6.useState)(readAccessRoute);
@@ -15138,6 +15269,7 @@
     if (!isAdmin) content = h("div", { className: "h-full flex items-center justify-center text-slate-500" }, "權限不足");
     else if (route === "roles") content = h(RolesView, { sb });
     else if (route === "modules") content = h(ModulesView, { sb });
+    else if (route === "people") content = h(PeopleView, { sb });
     else content = h(AccessHome, null);
     return h("div", { className: "flex h-[100dvh] w-full bg-slate-50 overflow-hidden relative" }, h(Sidebar, { active: "access", activeChild: route === "home" ? null : route, shell }), h("div", { className: "flex-1 min-w-0 h-full relative overflow-y-auto" }, content));
   };
