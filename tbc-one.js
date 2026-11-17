@@ -15118,6 +15118,7 @@
               h("tbody", null, feats.map((f) => h("tr", { key: f.key, style: { borderTop: "1px solid #f1f5f9" } },
                 h("td", { style: { padding: "8px", minWidth: 150 } }, f.name,
                   null),
+                !f.enforced ? h("td", { colSpan: cols.length, style: { textAlign: "center", padding: "8px", color: "#64748b", fontSize: 13 } }, "登入即可使用，不需設定") :
                 cols.map((r) => {
                   const on = !!d.fr[f.key + "|" + r.key];
                   return h("td", { key: r.key, style: { textAlign: "center", padding: "4px" } },
