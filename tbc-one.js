@@ -15237,7 +15237,7 @@
           okN++;
         } catch (e) { fails.push(p.name + "（" + (e.message || e) + "）"); }
       }
-      setMsg({ t: "已" + label + "：成功 " + okN + " 人" + (skipN ? "，原本就是這樣 " + skipN + " 人" : "") + (fails.length ? "；失敗 " + fails.length + " 人：" + fails.join("、") : ""), ok: !fails.length });
+      setMsg({ t: fails.length ? (on ? "新增" : "移除") + "失敗 " + fails.length + " 人：" + fails.join("、") : (on ? "新增完成" : "移除完成"), ok: !fails.length });
       setBusy(false);
       reload();
     };
@@ -15262,13 +15262,16 @@
           h("input", { style: { width: "100%", boxSizing: "border-box", border: "none", background: "#f1f5f9", borderRadius: 12, padding: "10px 36px 10px 38px", fontSize: 15, outline: "none" }, placeholder: "搜尋", value: q, onChange: (e) => setQ(e.target.value) }),
           q && h("button", { type: "button", "aria-label": "清除", onClick: () => setQ(""), style: { position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: "#64748b", display: "flex", padding: 4 } }, h(X, { size: 16 }))),
         h(RolePicker, { roles: d.roles.filter((r) => r.enabled), checked: checkedRoles, onChange: onPickRoles, countOf: (k) => d.people.filter((p) => p.roles.includes(k)).length }),
-        h("button", { style: AX.btn, onClick: () => { const n = { ...sel }; if (allSel) list.forEach((p) => { delete n[p.id]; }); else list.forEach((p) => { n[p.id] = true; }); setSel(n); } }, allSel ? "取消全選" : "全選目前清單"),
-        selected.length > 0 && h("button", { style: AX.btn, onClick: () => setSel({}) }, "清除選取")),
+        h("button", { style: AX.btn, onClick: () => { const n = { ...sel }; if (allSel) list.forEach((p) => { delete n[p.id]; }); else list.forEach((p) => { n[p.id] = true; }); setSel(n); } }, allSel ? "取消" : "全選"),
+        selected.length > 0 && h("button", { style: AX.btn, onClick: () => { setSel({}); setCheckedRoles({}); } }, "清除")),
       selected.length > 0 && h("div", { style: { ...AX.card, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: 12, background: "#eef2ff", borderColor: "#c7d2fe" } },
-        h("span", { style: { fontWeight: 600 } }, "已選 " + selected.length + " 人"),
-        h("select", { style: AX.input, value: batchRole, onChange: (e) => setBatchRole(e.target.value) }, manual.map((r) => h("option", { key: r.key, value: r.key }, r.name))),
-        h("button", { style: AX.btnOn, disabled: busy, onClick: () => applyBatch(true) }, "加上身分"),
-        h("button", { style: AX.btn, disabled: busy, onClick: () => applyBatch(false) }, "移除身分")),
+        h("span", { style: { fontWeight: 600 } }, "選取" + selected.length + "人"),
+        h("div", { role: "radiogroup", style: { display: "inline-flex", flexWrap: "wrap" } }, manual.map((r, i) => {
+          const on = batchRole === r.key;
+          return h("button", { key: r.key, type: "button", role: "radio", "aria-checked": on, onClick: () => setBatchRole(r.key), style: { border: "none", cursor: "pointer", position: "relative", zIndex: on ? 1 : 0, marginLeft: i ? 1 : 0, padding: "6px 14px", fontSize: 15, letterSpacing: ".05em", transition: "background-color .5s ease", boxShadow: on ? "0 0 0 1px #0043ed" : "0 0 0 1px #b5bfd9", background: on ? "#dee7ff" : "#fff", color: on ? "#0043ed" : "#3e4963", borderRadius: (i === 0 ? "6px 0 0 6px" : i === manual.length - 1 ? "0 6px 6px 0" : 0) } }, r.name);
+        })),
+        h("button", { style: AX.btnOn, disabled: busy, onClick: () => applyBatch(true) }, "新增"),
+        h("button", { style: AX.btn, disabled: busy, onClick: () => applyBatch(false) }, "移除")),
       h("div", { style: AX.card },
         d.loading ? h("p", { style: AX.muted }, "讀取中…") : list.length === 0 ? h("p", { style: AX.muted }, "沒有符合的人員") :
         list.map((p, idx) => h("div", { key: p.id, style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "10px 0", borderTop: idx ? "1px solid #f1f5f9" : "none" } },
